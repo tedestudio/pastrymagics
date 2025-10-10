@@ -1,0 +1,17 @@
+{
+  "cakes": [
+    {
+      "id": "cake_mfkvhhi146nppv",
+      "name": "DUSI",
+      "phone": "1234567890",
+      "weightKg": 1,
+      "icing": "frost",
+      "flavour": "vanilla",
+      "cakeType": "normal",
+      "shape": "circle",
+      "message": "HBD DUSI",
+      "referenceImage": null,
+      "createdAt": "2025-09-15T08:39:12.601Z"
+    }
+  ]
+}
