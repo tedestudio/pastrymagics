@@ -96,3 +96,11 @@ h1 {
 .button-two:hover {
   box-shadow: var(--background) -2px 2px 0px;
 }
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

@@ -16,7 +16,9 @@ export async function POST(req: Request) {
     message,
     withEgg,
     photoCount,
-    toys
+    toys,
+    flowers, // Added flowers (was missing but used in UI)
+    deliveryTimestamp, // ✨ NEW FIELD ADDED HERE
   } = await req.json();
 
   if (!supabase) {
@@ -37,8 +39,13 @@ export async function POST(req: Request) {
       message,
       withEgg,
       photoCount,
-      toys
+      toys,
+      flowers, // Included flowers in customization
     };
+
+    // Determine the field for delivery date/time.
+    // If your 'cakes' table has a separate column (e.g., 'delivery_time' as TIMESTAMP), use it.
+    // Assuming a separate 'delivery_time' column for easy querying:
 
     // Insert the data into the 'cakes' table, matching the schema
     const { data, error } = await supabase
@@ -46,11 +53,12 @@ export async function POST(req: Request) {
       .insert({
         name,
         phone,
-        total_price: price, // Renamed 'price' to 'total_price' to match your schema
+        total_price: price, // Renamed 'price' to 'total_price'
         reference_image_url: referenceImage, // Renamed 'image' to 'reference_image_url'
-        customization, // Insert the entire object into the JSONB column
+        delivery_time: deliveryTimestamp, // ✨ MAPPED NEW FIELD
+        customization, // Insert the entire customization object (JSONB)
       })
-      .select(); // Add .select() to get back data
+      .select();
 
     if (error) {
       console.error("Supabase insert error:", error);
