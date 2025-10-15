@@ -117,9 +117,25 @@ export default async function CustomiseById({
     chef_notes &&
     typeof chef_notes === "string" &&
     chef_notes.trim().length > 0;
-  const link = `${window.location.origin}/customise/${data.id}`;
-  const qr = await QRCode.toDataURL(link, { margin: 1, width: 160 });
 
+  // Build an absolute origin on the server — do not use `window` (not available during SSR).
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
+  const link = `${origin}/customise/${data.id}`;
+
+  let qr = "";
+  try {
+    qr = await QRCode.toDataURL(link, { margin: 1, width: 160 });
+  } catch (e) {
+    // If QR generation fails, keep qr empty and continue rendering (we'll show a fallback UI).
+    qr = "";
+    // eslint-disable-next-line no-console
+    console.error("QR generation failed:", e);
+  }
   return (
     <main className="px-4 py-6 max-w-5xl mx-auto">
       {/* --- HEADER --- */}
