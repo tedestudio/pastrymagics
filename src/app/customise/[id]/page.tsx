@@ -117,7 +117,8 @@ export default async function CustomiseById({
     chef_notes &&
     typeof chef_notes === "string" &&
     chef_notes.trim().length > 0;
-  const qr = await QRCode.toDataURL(data.id, { margin: 1, width: 160 });
+  const link = `${window.location.origin}/customise/${data.id}`;
+  const qr = await QRCode.toDataURL(link, { margin: 1, width: 160 });
 
   return (
     <main className="px-4 py-6 max-w-5xl mx-auto">
