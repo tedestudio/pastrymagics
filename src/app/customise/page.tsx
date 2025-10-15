@@ -17,7 +17,10 @@ import {
   X,
   Clock,
   CheckCircle,
-} from "lucide-react"; // Added Clock icon
+} from "lucide-react";
+
+// --- Session Storage Key ---
+const STORAGE_KEY = "currentCakeConfigId";
 
 // Define the shape of the data retrieved from the database
 type Option = { option_type: string; option_name: string; base_price: number };
@@ -28,13 +31,17 @@ export default function Customise() {
   const [weightKg, setWeightKg] = useState<string | null>(null);
   const [icing, setIcing] = useState<string | null>(null);
   const [flavour, setFlavour] = useState<string | null>(null);
+  const [filling, setFilling] = useState<string | null>(null);
   const [cakeType, setCakeType] = useState<string | null>(null);
   const [shape, setShape] = useState<string | null>(null);
   const [toys, setToys] = useState<ToysState>({});
   const [message, setMessage] = useState("");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  // State for tracking the ID in the database (synced with sessionStorage)
   const [savedId, setSavedId] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -47,23 +54,18 @@ export default function Customise() {
   const [showDialog, setShowDialog] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
 
-  // --- NEW STATE: Delivery Date and Time ---
+  // --- Delivery Date and Time ---
   const [deliveryTimestamp, setDeliveryTimestamp] = useState<string | null>(
     null
   );
 
-  // --- Utility for Minimum Delivery Date ---
   const getMinDateTime = useCallback(() => {
     const minDate = new Date();
-    // Add 2 days (48 hours) to the current time
     minDate.setDate(minDate.getDate() + 2);
 
-    // Format to YYYY-MM-DDTHH:mm for datetime-local input
-    // The date part
     const year = minDate.getFullYear();
     const month = String(minDate.getMonth() + 1).padStart(2, "0");
     const day = String(minDate.getDate()).padStart(2, "0");
-    // The time part (using the current hour/minute is fine for min time)
     const hours = String(minDate.getHours()).padStart(2, "0");
     const minutes = String(minDate.getMinutes()).padStart(2, "0");
 
@@ -72,15 +74,14 @@ export default function Customise() {
 
   const minDeliveryDate = useMemo(() => getMinDateTime(), [getMinDateTime]);
 
-  // --- Core Weight Calculation (Available globally for validation) ---
+  // --- Core Weight Calculation ---
   const numericWeight = useMemo(() => {
     return parseFloat(weightKg || "0");
   }, [weightKg]);
 
-  // --- Constants for Constraint ---
   const MIN_STEP_CAKE_WEIGHT = 3.0;
 
-  // --- Dynamic Option Filtering (...unchanged) ---
+  // --- Dynamic Option Filtering ---
   const weightOptions = useMemo(
     () =>
       options
@@ -92,13 +93,6 @@ export default function Customise() {
     () =>
       options
         .filter((o) => o.option_type === "icing")
-        .map((o) => o.option_name),
-    [options]
-  );
-  const flavourOptions = useMemo(
-    () =>
-      options
-        .filter((o) => o.option_type === "flavor")
         .map((o) => o.option_name),
     [options]
   );
@@ -128,7 +122,6 @@ export default function Customise() {
     return flowerOption?.base_price || 0;
   }, [options]);
 
-  // Map shapes to icons for visualization
   const shapeIconMap: Record<string, React.ElementType> = useMemo(
     () => ({
       Round: Circle,
@@ -141,7 +134,6 @@ export default function Customise() {
     []
   );
 
-  // Filter Icing options based on Cake Type rule
   const availableIcingOptions = useMemo(() => {
     const restrictedIcings = ["Fondant", "Semi-Fondant"];
 
@@ -153,13 +145,22 @@ export default function Customise() {
     return allIcingOptions;
   }, [allIcingOptions, cakeType]);
 
-  // Derived flags used across render (moved to component scope so JSX can reference them)
   const isFondant = useMemo(() => icing === "Fondant", [icing]);
   const isFourKgOrMore = useMemo(() => numericWeight >= 4, [numericWeight]);
   const isBasePromotionActive = useMemo(
     () => isFondant && isFourKgOrMore,
     [isFondant, isFourKgOrMore]
   );
+
+  // Helper to get filling option data for UI display
+  const fillingPriceMap = useMemo(() => {
+    return options
+      .filter((o) => o.option_type === "filling")
+      .map((o) => ({
+        name: o.option_name,
+        price: o.base_price,
+      }));
+  }, [options]);
 
   // --- Icing Reset Effect (unchanged) ---
   useEffect(() => {
@@ -178,17 +179,16 @@ export default function Customise() {
   }, [cakeType, icing, availableIcingOptions]);
   // --- END Icing Reset Effect ---
 
-  // --- VALIDATION LOGIC ---
+  // --- VALIDATION LOGIC (unchanged) ---
   const validationErrors = useMemo(() => {
     const errors: { [key: string]: string | null } = {
       fondantWeight: null,
       semiFondantWeight: null,
       tierCakeWeight: null,
       requiredFields: null,
-      deliveryDate: null, // NEW ERROR FIELD
+      deliveryDate: null,
     };
 
-    // R1-R3: Cake specific validations (unchanged)
     if (icing === "Fondant" && numericWeight < 1.5) {
       errors.fondantWeight =
         "Fondant icing requires a minimum weight of 1.5kg.";
@@ -204,24 +204,22 @@ export default function Customise() {
       errors.tierCakeWeight = `Tier cake requires a minimum total weight of ${MIN_STEP_CAKE_WEIGHT}kg.`;
     }
 
-    // R4: All primary fields selected
     if (
       !weightKg ||
       !icing ||
       !flavour ||
+      !filling ||
       !cakeType ||
       !shape ||
       !deliveryTimestamp
     ) {
       errors.requiredFields =
-        "Please select all primary cake options and the required delivery date/time.";
+        "Please select all primary cake options (Weight, Icing, Flavour, Filling, Style, Shape, Date/Time).";
     }
 
-    // R5: Delivery Date check
     if (deliveryTimestamp) {
       const selectedDate = new Date(deliveryTimestamp);
       const minDate = new Date(getMinDateTime());
-      // Simple comparison: selected time must be greater than or equal to minimum time
       if (selectedDate.getTime() < minDate.getTime()) {
         errors.deliveryDate = `Delivery must be scheduled at least 2 days in advance (after ${minDeliveryDate
           .replace("T", " at ")
@@ -236,6 +234,7 @@ export default function Customise() {
     cakeType,
     shape,
     flavour,
+    filling,
     weightKg,
     deliveryTimestamp,
     getMinDateTime,
@@ -251,11 +250,12 @@ export default function Customise() {
       !!weightKg &&
       !!icing &&
       !!flavour &&
+      !!filling &&
       !!cakeType &&
       !!shape &&
       !!deliveryTimestamp
     );
-  }, [weightKg, icing, flavour, cakeType, shape, deliveryTimestamp]);
+  }, [weightKg, icing, flavour, filling, cakeType, shape, deliveryTimestamp]);
 
   const isSavable = useMemo(() => {
     return isComplete && !hasErrors;
@@ -264,6 +264,12 @@ export default function Customise() {
   // --- END VALIDATION LOGIC ---
 
   useEffect(() => {
+    // Check session storage on mount
+    const storedId = sessionStorage.getItem(STORAGE_KEY);
+    if (storedId) {
+      setSavedId(storedId);
+    }
+
     (async () => {
       if (!supabase) return;
       const { data, error } = await supabase
@@ -286,6 +292,10 @@ export default function Customise() {
             (o) => o.option_type === "flavor"
           )?.option_name;
 
+          const initialFilling = data.find(
+            (o) => o.option_type === "filling"
+          )?.option_name;
+
           const initialCakeType =
             data.find((o) => o.option_name === "Regular Cake")?.option_name ||
             data.find((o) => o.option_type === "cake_type")?.option_name;
@@ -297,10 +307,10 @@ export default function Customise() {
           setWeightKg(initialWeight || null);
           setIcing(initialIcing || null);
           setFlavour(initialFlavour || null);
+          setFilling(initialFilling || null);
           setCakeType(initialCakeType || null);
           setShape(initialShape || null);
 
-          // Set initial delivery date/time to the minimum allowable time
           setDeliveryTimestamp(getMinDateTime());
         }
       }
@@ -312,6 +322,7 @@ export default function Customise() {
     })();
   }, [getMinDateTime]);
 
+  // --- SELLING PRICE CALCULATION (unchanged logic) ---
   const sellingPrice = useMemo(() => {
     const getOptionPrice = (type: string, name: string | null) => {
       if (!name) return 0;
@@ -336,6 +347,12 @@ export default function Customise() {
     const baseCakePrice = flavorBasePrice * numericWeight;
     total += baseCakePrice;
 
+    // --- Conditional Filling Price (Per kg) ---
+    if (filling && flavour && flavour !== filling) {
+      const fillingBasePrice = getOptionPrice("filling", filling);
+      total += fillingBasePrice * numericWeight;
+    }
+
     // --- Eggless Price (Multiplier) ---
     const egglessPricePerKg = getRulePrice("Eggless");
     if (!withEgg && egglessPricePerKg) {
@@ -345,6 +362,7 @@ export default function Customise() {
     total += getOptionPrice("shape", shape);
     total += getOptionPrice("cake_type", cakeType);
 
+    // --- Tiered Icing Pricing (unchanged) ---
     if (icing === "Fondant") {
       if (numericWeight >= 1 && numericWeight <= 1.5) {
         total += getRulePrice("Fondant_1_1.5kg");
@@ -365,16 +383,15 @@ export default function Customise() {
       }
     }
 
+    // --- Add-on Pricing (Photo, Flowers, Toys) ---
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
       const basePhotoPrice = getRulePrice("Photo Cake");
       total += basePhotoPrice * multiplier;
     }
 
-    // --- Flower Pricing ---
-    total += flowers * flowerOptionPrice;
+    total += flowers * flowerOptionPrice; // Flowers pricing calculation
 
-    // --- TOY PRICING LOGIC ---
     if (Object.keys(toys).length > 0) {
       Object.entries(toys).forEach(([toyName, count]) => {
         if (count > 0) {
@@ -393,7 +410,6 @@ export default function Customise() {
         }
       });
     }
-    // --- END TOY PRICING LOGIC ---
 
     return total;
   }, [
@@ -402,6 +418,7 @@ export default function Customise() {
     numericWeight,
     icing,
     flavour,
+    filling,
     cakeType,
     shape,
     withEgg,
@@ -410,7 +427,9 @@ export default function Customise() {
     flowers,
     flowerOptionPrice,
   ]);
+  // --- END SELLING PRICE CALCULATION ---
 
+  // --- PRICE BREAKDOWN CALCULATION (unchanged logic) ---
   const pricingBreakdown = useMemo(() => {
     const getOptionPrice = (type: string, name: string | null) => {
       if (!name) return 0;
@@ -440,7 +459,22 @@ export default function Customise() {
       currentTotal += baseCakePrice;
     }
 
-    // 2. Eggless Price (Multiplier)
+    // 2. Conditional Filling Price
+    if (filling) {
+      if (flavour && flavour !== filling) {
+        const fillingBasePrice = getOptionPrice("filling", filling);
+        const price = fillingBasePrice * numericWeight;
+        breakdown.push({
+          label: `Custom Filling (${filling}, x${numericWeight}kg)`,
+          price,
+        });
+        currentTotal += price;
+      } else {
+        breakdown.push({ label: `Filling (${filling})`, price: 0 });
+      }
+    }
+
+    // 3. Eggless Price (Multiplier)
     const egglessPricePerKg = getRulePrice("Eggless");
     if (!withEgg && egglessPricePerKg > 0) {
       const price = egglessPricePerKg * numericWeight;
@@ -451,7 +485,7 @@ export default function Customise() {
       currentTotal += price;
     }
 
-    // 3. Shape and Cake Type Add-ons
+    // 4. Shape and Cake Type Add-ons
     if (shape) {
       const price = getOptionPrice("shape", shape);
       if (price > 0) {
@@ -467,12 +501,11 @@ export default function Customise() {
       }
     }
 
-    // Extra Rules & Icing
+    // 5. Icing Tiered Pricing (unchanged)
     const isFondant = icing === "Fondant";
     const isFourKgOrMore = numericWeight >= 4;
     const isBasePromotionActive = isFondant && isFourKgOrMore;
 
-    // 4. Icing Tiered Pricing
     if (icing === "Fondant") {
       let price = 0;
       let label = `Icing (${icing})`;
@@ -511,7 +544,7 @@ export default function Customise() {
       breakdown.push({ label: `Icing (${icing})`, price: 0 });
     }
 
-    // 5. Photo Count
+    // 6. Photo Count (unchanged)
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
       const basePhotoPrice = getRulePrice("Photo Cake");
@@ -520,14 +553,14 @@ export default function Customise() {
       currentTotal += price;
     }
 
-    // 6. Flower Count
+    // 7. Flower Count (fixed/updated)
     if (flowers > 0) {
       const price = flowers * flowerOptionPrice;
       breakdown.push({ label: `Flowers (${flowers} units)`, price });
       currentTotal += price;
     }
 
-    // 7. Toys
+    // 8. Toys (unchanged)
     if (Object.keys(toys).length > 0) {
       Object.entries(toys).forEach(([toyName, count]) => {
         if (count > 0) {
@@ -560,6 +593,7 @@ export default function Customise() {
     numericWeight,
     icing,
     flavour,
+    filling,
     cakeType,
     shape,
     withEgg,
@@ -569,6 +603,7 @@ export default function Customise() {
     flowers,
     flowerOptionPrice,
   ]);
+  // --- END PRICE BREAKDOWN CALCULATION ---
 
   const flavourPriceMap = useMemo(() => {
     return options
@@ -579,6 +614,7 @@ export default function Customise() {
       }));
   }, [options]);
 
+  // --- UTILITY FUNCTIONS (mostly unchanged) ---
   const compressImage = async (
     dataUrl: string,
     maxWidth: number,
@@ -665,9 +701,10 @@ export default function Customise() {
     const details = [
       `Name: ${name}`,
       `Phone: ${phone}`,
-      `Delivery Time: ${new Date(deliveryTimestamp!).toLocaleString()}`, // Display formatted date
+      `Delivery Time: ${new Date(deliveryTimestamp!).toLocaleString()}`,
       `Weight: ${weightKg} kg`,
       `Flavour: ${flavour}`,
+      `Filling: ${filling}`,
       `Icing: ${icing}`,
       `Cake Style: ${cakeType}`,
       `Shape: ${shape}`,
@@ -754,40 +791,59 @@ export default function Customise() {
         }
       }
 
-      // 2. Save Data to Database (Logging the configuration)
-      // NOTE: The mock API call is updated to include deliveryTimestamp
-      const res = await fetch("/api/cakes", {
-        method: "POST",
+      // 2. Prepare Payload
+      const payload = {
+        name,
+        phone,
+        price: sellingPrice,
+        referenceImage: referenceImageUrl,
+        weightKg,
+        icing,
+        flavour,
+        filling,
+        cakeType,
+        shape,
+        message,
+        withEgg,
+        photoCount,
+        toys,
+        flowers,
+        deliveryTimestamp,
+      };
+
+      // 3. Determine Method and URL for Save/Update
+      const currentId = savedId || sessionStorage.getItem(STORAGE_KEY);
+
+      let res;
+      let method = "POST";
+      let url = "/api/cakes";
+
+      if (currentId) {
+        method = "PUT";
+        url = `/api/cakes?id=${currentId}`;
+      }
+
+      // 4. Send Request (POST for new, PUT for update)
+      res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          phone,
-          price: sellingPrice,
-          referenceImage: referenceImageUrl,
-          weightKg,
-          icing,
-          flavour,
-          cakeType,
-          shape,
-          message,
-          withEgg,
-          photoCount,
-          toys,
-          flowers,
-          deliveryTimestamp, // NEW FIELD
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) throw new Error("Save/Update failed");
+
       const data = await res.json();
       const orderId = data.id;
 
-      // 3. Generate QR Link
+      // 5. Update Session Storage and State
+      sessionStorage.setItem(STORAGE_KEY, orderId);
+      setSavedId(orderId); // Update local state with confirmed ID
+
+      // 6. Generate QR Link
       const link = `${window.location.origin}/customise/${orderId}`;
       const qr = await QRCode.toDataURL(link, { margin: 1, width: 160 });
 
-      // 4. Update State and Show Modal
-      setSavedId(orderId);
+      // 7. Update State and Show Modal
       setQrDataUrl(qr);
       setShowPricingModal(true);
     } catch (e) {
@@ -807,6 +863,9 @@ export default function Customise() {
     try {
       setSaving(true);
       createAndDownloadImage(savedId, qrDataUrl);
+
+      // --- FINAL STEP: CLEAR SESSION STORAGE ---
+      sessionStorage.removeItem(STORAGE_KEY);
 
       setShowPricingModal(false);
       setShowDialog(true);
@@ -987,8 +1046,57 @@ export default function Customise() {
               </div>
             </div>
 
+            {/* Filling Type */}
+            <div className="col-span-1">
+              <label className="block text-base font-semibold text-gray-700 mb-2">
+                Filling Type
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {fillingPriceMap.map((fillingItem) => {
+                  const isSameAsFlavour = flavour === fillingItem.name;
+                  const priceDisplay = isSameAsFlavour
+                    ? "FREE"
+                    : `+₹${fillingItem.price.toFixed(0)}/kg`;
+
+                  return (
+                    <button
+                      key={fillingItem.name}
+                      onClick={() => setFilling(fillingItem.name)}
+                      className={`p-3 rounded-xl text-sm border-2 transition-all duration-200 text-left ${
+                        filling === fillingItem.name
+                          ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                          : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50"
+                      }`}
+                      aria-pressed={filling === fillingItem.name}
+                    >
+                      <span className="block font-medium leading-snug">
+                        {fillingItem.name}
+                      </span>
+                      <span
+                        className="block text-xs font-bold pt-1 transition-colors duration-200"
+                        style={
+                          filling === fillingItem.name
+                            ? { color: "white" }
+                            : isSameAsFlavour
+                            ? { color: "green" }
+                            : { color: "red" }
+                        }
+                      >
+                        {priceDisplay}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {filling && flavour && filling !== flavour && (
+                <p className="mt-2 text-sm font-medium text-red-600">
+                  ⚠️ Custom filling selected: Extra charge applies.
+                </p>
+              )}
+            </div>
+
             {/* Shape (Buttons with Icons) */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-1">
               <label className="block text-base font-semibold text-gray-700 mb-2">
                 Cake Shape
               </label>
@@ -1304,7 +1412,7 @@ export default function Customise() {
                 >
                   {saving
                     ? "Processing Price..."
-                    : `Get Price & Share Customisation`}
+                    : `Get Price`}
                 </button>
               </div>
             </div>
@@ -1363,7 +1471,7 @@ export default function Customise() {
                 onClick={handleFinalShare}
                 disabled={saving}
               >
-                {saving ? "Generating PDF..." : "Save Config & Download PDF"}
+                {saving ? "Generating PDF..." : "Save Config & Share"}
               </button>
             </div>
           </div>
