@@ -1,12 +1,41 @@
 import { NextResponse } from "next/server";
+// Ensure this path is correct for your project
 import { supabase } from "@/lib/supabase";
 
-// Define the core logic for inserting/updating the cake data
-const upsertCake = async (id: string | null, payload: any) => {
+// =====================================================================
+// 1. Typescript Interface for Input Payload
+// =====================================================================
+
+interface CakePayload {
+  name: string;
+  phone: string;
+  price: number;
+  referenceImage: string | null;
+  weightKg: number | null;
+  icing: string | null;
+  flavour: string | null;
+  cakeType: string | null;
+  shape: string | null;
+  message: string | null; // Customer-facing message on the cake
+  withEgg: boolean;
+  photoCount: number | null;
+  toys: string | null;
+  flowers: string | null;
+  deliveryTimestamp: string; // ISO 8601 string
+  filling: string | null;
+  chefNotes: string | null; // NEW: Internal notes for the chef/baker
+}
+
+// =====================================================================
+// 2. Core Logic for Inserting/Updating Cake Data
+// =====================================================================
+
+const upsertCake = async (id: string | null, payload: CakePayload) => {
   if (!supabase) {
     throw new Error("Supabase client not initialized");
   }
 
+  // Destructure all payload fields
   const {
     name,
     phone,
@@ -24,6 +53,7 @@ const upsertCake = async (id: string | null, payload: any) => {
     flowers,
     deliveryTimestamp,
     filling,
+    chefNotes, // Included new field
   } = payload;
 
   // Collect all customization details for the JSONB column
@@ -34,20 +64,22 @@ const upsertCake = async (id: string | null, payload: any) => {
     filling,
     cakeType,
     shape,
-    message,
+    message, // Customer message remains in customization
     withEgg,
     photoCount,
     toys,
     flowers,
+    chef_notes: chefNotes, // NEW: Separate column for internal notes
   };
 
+  // Map to snake_case for Supabase database columns
   const dataToUpsert = {
     name,
     phone,
     total_price: price,
     reference_image_url: referenceImage,
     delivery_time: deliveryTimestamp,
-    customization,
+    customization, // JSONB column
   };
 
   if (id) {
@@ -64,10 +96,10 @@ const upsertCake = async (id: string | null, payload: any) => {
 };
 
 // =====================================================================
-// API Route Handlers
+// 3. API Route Handlers (POST, PUT, GET)
 // =====================================================================
 
-// 1. Handler for creating a NEW cake configuration (Initial Save)
+// Handler for creating a NEW cake configuration (Initial Save)
 export async function POST(req: Request) {
   if (!supabase) {
     return NextResponse.json(
@@ -76,7 +108,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const payload = await req.json();
+  // Assuming the incoming JSON structure matches CakePayload
+  const payload: CakePayload = await req.json();
 
   try {
     const { data, error } = await upsertCake(null, payload);
@@ -94,7 +127,7 @@ export async function POST(req: Request) {
   }
 }
 
-// 2. Handler for updating an EXISTING cake configuration (Editing)
+// Handler for updating an EXISTING cake configuration (Editing)
 export async function PUT(req: Request) {
   if (!supabase) {
     return NextResponse.json(
@@ -114,7 +147,8 @@ export async function PUT(req: Request) {
     );
   }
 
-  const payload = await req.json();
+  // Assuming the incoming JSON structure matches CakePayload
+  const payload: CakePayload = await req.json();
 
   try {
     const { data, error } = await upsertCake(id, payload);
@@ -135,7 +169,7 @@ export async function PUT(req: Request) {
   }
 }
 
-// 3. (Optional) Handler to fetch existing data if the user reloads the page with the ID in the URL
+// Handler to fetch existing data
 export async function GET(req: Request) {
   if (!supabase) {
     return NextResponse.json(
@@ -155,11 +189,18 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Select all necessary fields, including the new chef_notes
     const { data, error } = await supabase
       .from("cakes")
       .select(
         `
-            id, name, phone, total_price, reference_image_url, delivery_time, customization
+            id, 
+            name, 
+            phone, 
+            total_price, 
+            reference_image_url, 
+            delivery_time, 
+            customization,
         `
       )
       .eq("id", id)

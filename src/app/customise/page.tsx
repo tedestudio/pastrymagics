@@ -36,6 +36,9 @@ export default function Customise() {
   const [shape, setShape] = useState<string | null>(null);
   const [toys, setToys] = useState<ToysState>({});
   const [message, setMessage] = useState("");
+  // --- NEW STATE: Chef Notes ---
+  const [chefNotes, setChefNotes] = useState("");
+
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
@@ -61,7 +64,7 @@ export default function Customise() {
 
   const getMinDateTime = useCallback(() => {
     const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 2);
+    minDate.setHours(minDate.getHours() + 10); // ⬅️ add 10 hours instead of 2 days
 
     const year = minDate.getFullYear();
     const month = String(minDate.getMonth() + 1).padStart(2, "0");
@@ -116,9 +119,7 @@ export default function Customise() {
     [options]
   );
   const flowerOptionPrice = useMemo(() => {
-    const flowerOption = options.find(
-      (o) => o.option_type === "flower" && o.option_name === "General Flower"
-    );
+    const flowerOption = options.find((o) => o.option_type === "flower");
     return flowerOption?.base_price || 0;
   }, [options]);
 
@@ -153,14 +154,29 @@ export default function Customise() {
   );
 
   // Helper to get filling option data for UI display
-  const fillingPriceMap = useMemo(() => {
-    return options
-      .filter((o) => o.option_type === "filling")
-      .map((o) => ({
-        name: o.option_name,
-        price: o.base_price,
-      }));
+  const allFillingOptions = useMemo(() => {
+    return options.filter((o) => o.option_type === "filling");
   }, [options]);
+
+  // CORE LOGIC: Set of flavors that have a corresponding filling option
+  const supportedFillingFlavors = useMemo(() => {
+    const fillingNames = new Set(allFillingOptions.map((o) => o.option_name));
+    return Array.from(fillingNames);
+  }, [allFillingOptions]);
+
+  // The final list of fillings available for selection (all options if the flavor is supported)
+  const dependentFillingOptions = useMemo(() => {
+    if (!flavour || !supportedFillingFlavors.includes(flavour)) {
+      return []; // Hide/disable selection if the flavor is not supported
+    }
+    // Otherwise, show all filling options (including the current flavour)
+    return allFillingOptions;
+  }, [flavour, allFillingOptions, supportedFillingFlavors]);
+
+  // Determine if the filling section should be shown at all
+  const isFillingSectionAvailable = useMemo(() => {
+    return !!flavour && supportedFillingFlavors.includes(flavour);
+  }, [flavour, supportedFillingFlavors]);
 
   // --- Icing Reset Effect (unchanged) ---
   useEffect(() => {
@@ -179,7 +195,17 @@ export default function Customise() {
   }, [cakeType, icing, availableIcingOptions]);
   // --- END Icing Reset Effect ---
 
-  // --- VALIDATION LOGIC (unchanged) ---
+  // NEW EFFECT: Reset filling if flavor changes and the filling section is no longer available.
+  useEffect(() => {
+    if (!isFillingSectionAvailable) {
+      setFilling(null);
+    } else if (!filling) {
+      // Automatically set filling to match flavor if available and not yet set
+      setFilling(flavour);
+    }
+  }, [flavour, filling, isFillingSectionAvailable]);
+
+  // --- VALIDATION LOGIC (updated required fields) ---
   const validationErrors = useMemo(() => {
     const errors: { [key: string]: string | null } = {
       fondantWeight: null,
@@ -208,22 +234,20 @@ export default function Customise() {
       !weightKg ||
       !icing ||
       !flavour ||
-      !filling ||
+      (isFillingSectionAvailable && !filling) ||
       !cakeType ||
       !shape ||
       !deliveryTimestamp
     ) {
       errors.requiredFields =
-        "Please select all primary cake options (Weight, Icing, Flavour, Filling, Style, Shape, Date/Time).";
+        "Please select all primary cake options (Weight, Icing, Flavour, Style, Shape, Date/Time).";
     }
 
     if (deliveryTimestamp) {
       const selectedDate = new Date(deliveryTimestamp);
       const minDate = new Date(getMinDateTime());
       if (selectedDate.getTime() < minDate.getTime()) {
-        errors.deliveryDate = `Delivery must be scheduled at least 2 days in advance (after ${minDeliveryDate
-          .replace("T", " at ")
-          .substring(0, 16)}).`;
+        errors.deliveryDate = `Delivery must be scheduled at least 10 hours in advance`;
       }
     }
 
@@ -239,6 +263,7 @@ export default function Customise() {
     deliveryTimestamp,
     getMinDateTime,
     minDeliveryDate,
+    isFillingSectionAvailable,
   ]);
 
   const hasErrors = useMemo(() => {
@@ -250,12 +275,21 @@ export default function Customise() {
       !!weightKg &&
       !!icing &&
       !!flavour &&
-      !!filling &&
+      (!isFillingSectionAvailable || !!filling) &&
       !!cakeType &&
       !!shape &&
       !!deliveryTimestamp
     );
-  }, [weightKg, icing, flavour, filling, cakeType, shape, deliveryTimestamp]);
+  }, [
+    weightKg,
+    icing,
+    flavour,
+    filling,
+    cakeType,
+    shape,
+    deliveryTimestamp,
+    isFillingSectionAvailable,
+  ]);
 
   const isSavable = useMemo(() => {
     return isComplete && !hasErrors;
@@ -307,7 +341,7 @@ export default function Customise() {
           setWeightKg(initialWeight || null);
           setIcing(initialIcing || null);
           setFlavour(initialFlavour || null);
-          setFilling(initialFilling || null);
+          setFilling(initialFlavour || null); // Initialize filling to match flavor default
           setCakeType(initialCakeType || null);
           setShape(initialShape || null);
 
@@ -429,7 +463,7 @@ export default function Customise() {
   ]);
   // --- END SELLING PRICE CALCULATION ---
 
-  // --- PRICE BREAKDOWN CALCULATION (unchanged logic) ---
+  // --- PRICE BREAKDOWN CALCULATION (updated logic) ---
   const pricingBreakdown = useMemo(() => {
     const getOptionPrice = (type: string, name: string | null) => {
       if (!name) return 0;
@@ -715,6 +749,7 @@ export default function Customise() {
       ),
       `Flowers: ${flowers} units`,
       `Message: ${message || "None"}`,
+      `Notes: ${chefNotes || "None"}`, // ADDED TO PDF DETAILS
     ];
     details.forEach((line: string) => {
       doc.text(line, margin, y);
@@ -809,6 +844,7 @@ export default function Customise() {
         toys,
         flowers,
         deliveryTimestamp,
+        chefNotes, // ADDED TO PAYLOAD
       };
 
       // 3. Determine Method and URL for Save/Update
@@ -1046,54 +1082,66 @@ export default function Customise() {
               </div>
             </div>
 
-            {/* Filling Type */}
-            <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
-                Filling Type
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {fillingPriceMap.map((fillingItem) => {
-                  const isSameAsFlavour = flavour === fillingItem.name;
-                  const priceDisplay = isSameAsFlavour
-                    ? "FREE"
-                    : `+₹${fillingItem.price.toFixed(0)}/kg`;
+            {/* Filling Type (CONDITIONAL) */}
+            {isFillingSectionAvailable ? (
+              <div className="col-span-1">
+                <label className="block text-base font-semibold text-gray-700 mb-2">
+                  Filling Type
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {dependentFillingOptions.map((fillingName) => {
+                    const fillingItem = allFillingOptions.find(
+                      (o) => o.option_name === fillingName.option_name
+                    );
+                    const isSameAsFlavour = flavour === fillingName.option_name;
 
-                  return (
-                    <button
-                      key={fillingItem.name}
-                      onClick={() => setFilling(fillingItem.name)}
-                      className={`p-3 rounded-xl text-sm border-2 transition-all duration-200 text-left ${
-                        filling === fillingItem.name
-                          ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                          : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50"
-                      }`}
-                      aria-pressed={filling === fillingItem.name}
-                    >
-                      <span className="block font-medium leading-snug">
-                        {fillingItem.name}
-                      </span>
-                      <span
-                        className="block text-xs font-bold pt-1 transition-colors duration-200"
-                        style={
-                          filling === fillingItem.name
-                            ? { color: "white" }
-                            : isSameAsFlavour
-                            ? { color: "green" }
-                            : { color: "red" }
-                        }
+                    if (!fillingItem) return null; // Should not happen
+
+                    const priceDisplay = isSameAsFlavour
+                      ? "FREE"
+                      : `+₹${fillingItem.base_price.toFixed(0)}/kg`;
+
+                    return (
+                      <button
+                        key={fillingItem.option_name}
+                        onClick={() => setFilling(fillingItem.option_name)}
+                        className={`p-3 rounded-xl text-sm border-2 transition-all duration-200 text-left ${
+                          filling === fillingItem.option_name
+                            ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                            : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50"
+                        }`}
+                        aria-pressed={filling === fillingItem.option_name}
                       >
-                        {priceDisplay}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <span className="block font-medium leading-snug">
+                          {fillingItem.option_name}
+                        </span>
+                        <span
+                          className="block text-xs font-bold pt-1 transition-colors duration-200"
+                          style={
+                            filling === fillingItem.option_name
+                              ? { color: "white" }
+                              : isSameAsFlavour
+                              ? { color: "green" }
+                              : { color: "red" }
+                          }
+                        >
+                          {priceDisplay}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {filling && flavour && filling !== flavour && (
-                <p className="mt-2 text-sm font-medium text-red-600">
-                  ⚠️ Custom filling selected: Extra charge applies.
+            ) : (
+              <div className="col-span-1">
+                <label className="block text-base font-semibold text-gray-700 mb-2">
+                  Filling Type
+                </label>
+                <p className="p-3 rounded-xl border border-gray-300 bg-gray-50 text-sm text-gray-500">
+                  Filling not available for "{flavour || "Selected Flavour"}".
                 </p>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Shape (Buttons with Icons) */}
             <div className="lg:col-span-1">
@@ -1372,6 +1420,24 @@ export default function Customise() {
               </div>
             </div>
 
+            {/* --- NEW: Chef Notes --- */}
+            <div className="lg:col-span-3 mt-4">
+              <label className="block text-base font-semibold text-gray-700 mb-2">
+                Chef's Notes (Optional)
+              </label>
+              <textarea
+                value={chefNotes}
+                onChange={(e) => setChefNotes(e.target.value)}
+                placeholder="E.g., Please make the frosting dark blue, or avoid peanuts..."
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base focus:ring-[var(--primary)] focus:border-[var(--primary)] min-h-24"
+                maxLength={200}
+              />
+              <p className="mt-1 text-xs text-foreground/60 text-right">
+                {chefNotes.length} / 200 characters
+              </p>
+            </div>
+            {/* --- END NEW: Chef Notes --- */}
+
             {/* Final Actions and Validation */}
             <div className="lg:col-span-3 pt-6 mt-4 border-t border-gray-100">
               {/* Consent checkbox */}
@@ -1410,9 +1476,7 @@ export default function Customise() {
                   disabled={!isSavable || saving}
                   onClick={handleNextStep}
                 >
-                  {saving
-                    ? "Processing Price..."
-                    : `Get Price`}
+                  {saving ? "Processing Price..." : `Get Price`}
                 </button>
               </div>
             </div>
@@ -1471,7 +1535,7 @@ export default function Customise() {
                 onClick={handleFinalShare}
                 disabled={saving}
               >
-                {saving ? "Generating PDF..." : "Save Config & Share"}
+                {saving ? "Generating PDF..." : "Save Config & Download PDF"}
               </button>
             </div>
           </div>

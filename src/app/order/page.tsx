@@ -19,6 +19,8 @@ import {
   Tally1,
   X,
   CheckCircle,
+  Menu, // Added for mobile menu button
+  ArrowLeft, // Added for mobile menu close button
 } from "lucide-react";
 
 // --- DUMMY AD DATA (Replace with API call or real data later) ---
@@ -70,7 +72,7 @@ type Item = {
   stock_quantity: number;
   category: MenuCategory;
   diet: ItemDiet;
-  parcel: number; // Renamed from parcel_fee for API consistency, but treated as fee/unit
+  parcel: number;
 };
 type CartItem = Item & { qty: number };
 
@@ -140,6 +142,9 @@ export default function OrderPage() {
   >(null);
   const [isVegFilterActive, setIsVegFilterActive] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("Dine-In");
+
+  // NEW: State for mobile sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -237,6 +242,7 @@ export default function OrderPage() {
   const handleAdClick = (targetCategory: MenuCategory) => {
     // 1. Change the selected category
     setSelectedCategory(targetCategory);
+    setIsSidebarOpen(false); // Close sidebar on mobile after selection
 
     // 2. Scroll the user down to the menu view (optional, but helpful)
     const menuSection = document.getElementById("menu-section");
@@ -393,33 +399,43 @@ export default function OrderPage() {
   // --- RENDER ---
 
   return (
-    <main className="px-6 py-8 max-w-7xl mx-auto pb-24">
-      <h1 className="text-4xl font-bold text-center text-[var(--primary)]">
-        Restaurant Digital Menu
-      </h1>
-      <p className="text-center mt-2 text-foreground/60">
+    <main className="px-4 py-6 md:px-6 md:py-8 max-w-7xl mx-auto pb-24">
+      {/* HEADER AND MOBILE MENU BUTTON */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-[var(--primary)]">
+          Digital Menu
+        </h1>
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="lg:hidden p-2 rounded-lg bg-[var(--primary)] text-white shadow-md"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
+
+      <p className="mt-2 text-foreground/60 hidden sm:block">
         Browse, customize, and checkout using the cart button below.
       </p>
 
-      {/* --- NEW: SCROLLING AD BANNER --- */}
+      {/* --- SCROLLING AD BANNER --- */}
       <div
         ref={bannerRef}
-        className="mt-8 mb-10 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-xl shadow-xl bg-gray-100"
+        className="mt-6 mb-8 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-xl shadow-lg bg-gray-100"
         style={{ scrollSnapType: "x mandatory" }}
       >
         {AD_BANNERS.map((ad) => (
           <div
             key={ad.id}
             onClick={() => handleAdClick(ad.targetCategory)}
-            className="flex-shrink-0 w-full snap-center relative h-12 md:h-24 cursor-pointer"
+            className="flex-shrink-0 w-full snap-center relative h-16 md:h-24 cursor-pointer"
             style={{
               backgroundImage: `url(${ad.image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           >
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
-              <p className="text-white text-xl md:text-xl font-extrabold text-center tracking-wide">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-2">
+              <p className="text-white text-base md:text-xl font-extrabold text-center tracking-wide">
                 {ad.text}
               </p>
             </div>
@@ -429,12 +445,15 @@ export default function OrderPage() {
       {/* --------------------------------- */}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* ---------------------------------- */}
         {/* Left Sidebar: Categories and Filters */}
-        <aside className="col-span-1 rounded-xl border border-gray-200 bg-white p-4 shadow-lg h-fit sticky top-6">
+        {/* ---------------------------------- */}
+
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block col-span-1 rounded-xl border border-gray-200 bg-white p-4 shadow-lg h-fit sticky top-6">
           <h2 className="text-xl font-bold pb-3 border-b border-gray-100 mb-2">
             Menu Sections
           </h2>
-
           <div className="flex flex-col gap-1 mt-3 max-h-[50vh] overflow-y-auto pr-2">
             {categories.map((cat) => {
               const IconComponent = getCategoryIcon(cat);
@@ -454,7 +473,6 @@ export default function OrderPage() {
               );
             })}
           </div>
-
           {/* Veg Filter Switch */}
           <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -477,12 +495,84 @@ export default function OrderPage() {
           </div>
         </aside>
 
-        {/* Middle: Menu Items */}
+        {/* Mobile Sidebar Modal */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 lg:hidden bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <aside
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+              className="absolute left-0 top-0 h-full w-3/4 bg-white p-4 shadow-2xl transform transition-transform duration-300"
+            >
+              <div className="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 className="text-xl font-bold text-[var(--primary)]">
+                  Menu Sections
+                </h2>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                >
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1 max-h-[70vh] overflow-y-auto pr-2">
+                {categories.map((cat) => {
+                  const IconComponent = getCategoryIcon(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setIsSidebarOpen(false); // Close after selection
+                      }}
+                      className={`flex items-center space-x-3 p-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                        selectedCategory === cat
+                          ? "bg-[var(--primary)] text-white shadow-md"
+                          : "text-foreground hover:bg-gray-50 hover:text-[var(--primary)]"
+                      }`}
+                    >
+                      <IconComponent className="w-5 h-5" />
+                      <span>{cat}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Veg Filter Switch - Mobile */}
+              <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Leaf
+                    className={`w-6 h-6 transition-colors ${
+                      isVegFilterActive ? "text-green-600" : "text-gray-400"
+                    }`}
+                  />
+                  <span className="text-base font-semibold">
+                    Veg Only Filter
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isVegFilterActive}
+                    onChange={(e) => setIsVegFilterActive(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-12 h-7 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
+                </label>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* ---------------------------------- */}
+        {/* Right Section: Menu Items */}
+        {/* ---------------------------------- */}
         <section
           id="menu-section"
-          className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-6 shadow-lg"
+          className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-lg"
         >
-          <h2 className="text-2xl font-bold border-b pb-3 mb-6 text-foreground/80">
+          <h2 className="text-xl sm:text-2xl font-bold border-b pb-3 mb-6 text-foreground/80">
             {selectedCategory || "All Items"}
           </h2>
 
@@ -557,32 +647,28 @@ export default function OrderPage() {
         </section>
       </div>
 
-      {/* --- FLOATING CART SHEET --- */}
+      {/* --- FLOATING CART SHEET (Revised) --- */}
       {cart.length > 0 && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-white border-t-2 border-[var(--primary)] shadow-2xl cursor-pointer transition-all duration-300 hover:bg-gray-50"
-          onClick={openModal}
-        >
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-white border-t-2 border-[var(--primary)] shadow-2xl transition-all duration-300">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-6 h-6 text-[var(--primary)]" />
               <span className="text-lg font-semibold text-foreground">
-                {totalItemCount} Items in Cart
+                {totalItemCount} Items
               </span>
             </div>
-            <div className="text-right">
-              <span className="text-sm text-foreground/70 mr-2">
-                Total Price:
-              </span>
-              <span className="text-2xl font-bold text-[var(--primary)]">
-                ₹{total.toFixed(2)}
-              </span>
-            </div>
+            {/* NEW: View Cart Button */}
+            <button
+              onClick={openModal}
+              className="flex items-center justify-center px-4 py-2 rounded-xl bg-[var(--primary)] text-white font-bold text-base shadow-md transition-colors hover:bg-[var(--primary-600)]"
+            >
+              View Cart <span className="ml-2">₹{total.toFixed(2)}</span>
+            </button>
           </div>
         </div>
       )}
 
-      {/* --- ORDER MODAL / DIALOG BOX --- */}
+      {/* --- ORDER MODAL / DIALOG BOX --- (No functional changes needed here, only aesthetic) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-100">
