@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useRef,
-  Component,
-} from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,8 +19,14 @@ import {
   Tally1,
   X,
   CheckCircle,
-  Menu, // Added for mobile menu button
-  ArrowLeft, // Added for mobile menu close button
+  Menu,
+  ArrowLeft,
+  Component,
+  CupSoda,
+  ChevronsRight, // Used for Noodles/Rice/Manchuria main course group
+  UtensilsCrossed, // Used for Starters
+  Sandwich, // Used for Sandwich/Burger group
+  Coffee as BeverageIcon, // Renaming Coffee to avoid conflict
 } from "lucide-react";
 
 // --- DUMMY AD DATA (Replace with API call or real data later) ---
@@ -64,11 +63,16 @@ type MenuCategory =
   | "Ramen & Corn Dogs"
   | "Continental"
   | "Rice Combos"
-  | "Beverages"
+  | "Beverage"
   | "Bakery Specials"
   | "Pizza"
   | "Sandwich"
-  | "Burger"; // Include categories from your database insertion script
+  | "Burger"
+  | "Shake"
+  | "Thick Shake"
+  | "Mojito"
+  | "Chinese Main"
+  | "Chinese Starter"; // Included categories from your DB insertions
 
 type ItemDiet = "Veg" | "Non-Veg" | "Egg";
 type OrderType = "Dine-In" | "TakeAway";
@@ -97,38 +101,44 @@ type MenuItemApiResponse = {
   parcel: number;
 };
 
-export const getCategoryIcon = (
+// --- UPDATED CATEGORY ICON MAP ---
+const getCategoryIcon = (
   category: string | MenuCategory
 ): React.ElementType => {
   switch (category) {
     case "Noodles":
     case "Fried Rice":
-      return Utensils; // General utensils for main courses
+    case "Chinese Main":
+    case "Manchuria":
+      return ChevronsRight; // For main course grouping
     case "Soups":
       return Soup;
     case "Starters (Dry)":
-      return Drumstick; // Representing appetizers/finger food
-    case "Manchuria":
-      return Salad; // Using salad/bowl icon for main curry items
+    case "Chinese Starter":
+      return UtensilsCrossed; // Appetizers/Dry starters
     case "Chat & Puri":
-      return Tally1; // Representing small portions/street food
+      return Tally1;
     case "North Indian Snacks":
-    case "Sandwich":
-    case "Burger":
-      return ShoppingBag; // General takeaway/snack icon
+      return ShoppingBag; // General snack/takeaway
     case "Ramen & Corn Dogs":
     case "Continental":
-      return Pizza; // General Western/fusion icon
+      return Home; // General fusion/international
     case "Rice Combos":
-      return Package; // Representing a combined meal/package
-    case "Beverages":
-      return Coffee;
+      return Package; // Combo meals/packages
+    case "Beverage":
+    case "Shake":
+    case "Thick Shake":
+    case "Mojito":
+      return CupSoda; // All cold drinks/shakes
+    case "Pizza":
+      return Pizza;
+    case "Sandwich":
+    case "Burger":
+      return Sandwich;
     case "Bakery Specials":
       return Cake;
-    case "Pizza":
-      return Pizza; // Explicit pizza icon
     default:
-      return Component; // Component is a good generic fallback icon
+      return Component;
   }
 };
 
@@ -464,11 +474,30 @@ export default function OrderPage() {
         {/* ---------------------------------- */}
 
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block col-span-1 rounded-xl border border-gray-200 bg-white p-4 shadow-lg h-fit sticky top-6">
+        <aside className="hidden lg:block col-span-1 rounded-xl border border-gray-200 bg-white p-4 shadow-lg h-full sticky top-6">
           <h2 className="text-xl font-bold pb-3 border-b border-gray-100 mb-2">
             Menu Sections
           </h2>
-          <div className="flex flex-col gap-1 mt-3 max-h-[50vh] overflow-y-auto pr-2">
+          <div className="py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Leaf
+                className={`w-6 h-6 transition-colors ${
+                  isVegFilterActive ? "text-green-600" : "text-gray-400"
+                }`}
+              />
+              <span className="text-base font-semibold">Veg Only</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isVegFilterActive}
+                onChange={(e) => setIsVegFilterActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-12 h-7 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
+            </label>
+          </div>
+          <div className="flex flex-col gap-1 mt-3 pr-2">
             {categories.map((cat) => {
               const IconComponent = getCategoryIcon(cat);
               return (
@@ -488,25 +517,6 @@ export default function OrderPage() {
             })}
           </div>
           {/* Veg Filter Switch */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Leaf
-                className={`w-6 h-6 transition-colors ${
-                  isVegFilterActive ? "text-green-600" : "text-gray-400"
-                }`}
-              />
-              <span className="text-base font-semibold">Veg Only Filter</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isVegFilterActive}
-                onChange={(e) => setIsVegFilterActive(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-12 h-7 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
-            </label>
-          </div>
         </aside>
 
         {/* Mobile Sidebar Modal */}
@@ -591,7 +601,7 @@ export default function OrderPage() {
           </h2>
 
           {/* List of Items */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[80vh] overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[120vh] overflow-y-auto pr-2">
             {displayedMenuItems.map((it) => {
               const current = cart.find((c) => c.id === it.id)?.qty ?? 0;
               const dietColor = getDietColor(it.diet);
@@ -615,14 +625,6 @@ export default function OrderPage() {
                       </p>
                       <p className="text-sm font-medium text-foreground mt-1">
                         ₹{it.price.toFixed(2)}
-                      </p>
-                      <p className={`text-xs font-medium ${dietColor} mt-0.5`}>
-                        {it.diet}
-                        {orderType === "TakeAway" && it.parcel > 0 && (
-                          <span className="ml-2 text-red-500 font-normal">
-                            (+₹{it.parcel.toFixed(0)} Parcel)
-                          </span>
-                        )}
                       </p>
                     </div>
                   </div>
@@ -684,7 +686,7 @@ export default function OrderPage() {
 
       {/* --- ORDER MODAL / DIALOG BOX --- (No functional changes needed here, only aesthetic) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 bg-opacity-60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-100">
             <div className="flex justify-between items-center border-b pb-3 mb-4">
               <h2 className="text-2xl font-bold text-[var(--primary)]">
