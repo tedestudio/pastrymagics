@@ -215,13 +215,12 @@ export default function Customise() {
       deliveryDate: null,
     };
 
-    if (icing === "Fondant" && numericWeight < 1.5) {
-      errors.fondantWeight =
-        "Fondant icing requires a minimum weight of 1.5kg.";
+    if (icing === "Fondant" && numericWeight < 1) {
+      errors.fondantWeight = "Fondant icing requires a minimum weight of 1kg.";
     }
     if (icing === "Semi-Fondant" && numericWeight < 1) {
       errors.semiFondantWeight =
-        "Semi-Fondant icing requires a minimum weight of 1.0kg.";
+        "Semi-Fondant icing requires a minimum weight of 1kg.";
     }
     if (
       cakeType === "Step Cake / Tier Cake" &&
@@ -394,33 +393,20 @@ export default function Customise() {
     }
 
     total += getOptionPrice("shape", shape);
-    total += getOptionPrice("cake_type", cakeType);
 
     // --- Tiered Icing Pricing (unchanged) ---
     if (icing === "Fondant") {
-      if (numericWeight >= 1 && numericWeight <= 1.5) {
-        total += getRulePrice("Fondant_1_1.5kg");
-      } else if (numericWeight >= 2 && numericWeight <= 4) {
-        total += getRulePrice("Fondant_2_4kg");
-      } else if (numericWeight >= 5) {
-        total += getRulePrice("Fondant_5kg_and_above");
-      }
+      total += getOptionPrice("icing", icing) * numericWeight;
     }
 
     if (icing === "Semi-Fondant") {
-      if (numericWeight >= 1 && numericWeight <= 1.5) {
-        total += getRulePrice("Semi-Fondant_1_1.5kg");
-      } else if (numericWeight >= 2 && numericWeight <= 4) {
-        total += getRulePrice("Semi-Fondant_2_4kg");
-      } else if (numericWeight >= 5) {
-        total += getRulePrice("Semi-Fondant_5kg_and_above");
-      }
+      total += getOptionPrice("icing", icing) * numericWeight;
     }
 
     // --- Add-on Pricing (Photo, Flowers, Toys) ---
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
-      const basePhotoPrice = getRulePrice("Photo Cake");
+      const basePhotoPrice = getOptionPrice("photos", "Photos");
       total += basePhotoPrice * multiplier;
     }
 
@@ -527,49 +513,19 @@ export default function Customise() {
         currentTotal += price;
       }
     }
-    if (cakeType) {
-      const price = getOptionPrice("cake_type", cakeType);
-      if (price > 0) {
-        breakdown.push({ label: `Cake Style (${cakeType})`, price });
-        currentTotal += price;
-      }
-    }
-
-    // 5. Icing Tiered Pricing (unchanged)
-    const isFondant = icing === "Fondant";
-    const isFourKgOrMore = numericWeight >= 4;
+    const isFourKgOrMore = numericWeight >= 1;
     const isBasePromotionActive = isFondant && isFourKgOrMore;
 
     if (icing === "Fondant") {
-      let price = 0;
       let label = `Icing (${icing})`;
-      if (numericWeight >= 1 && numericWeight <= 1.5) {
-        price = getRulePrice("Fondant_1_1.5kg");
-        label = `Icing (${icing} 1-1.5kg)`;
-      } else if (numericWeight >= 2 && numericWeight <= 4) {
-        price = getRulePrice("Fondant_2_4kg");
-        label = `Icing (${icing} 2-4kg)`;
-      } else if (numericWeight >= 5) {
-        price = getRulePrice("Fondant_5kg_and_above");
-        label = `Icing (${icing} 5kg+)`;
-      }
+      let price = getOptionPrice("icing", icing) * numericWeight;
       if (price > 0) {
         breakdown.push({ label: label, price: price });
         currentTotal += price;
       }
     } else if (icing === "Semi-Fondant") {
-      let price = 0;
       let label = `Icing (${icing})`;
-      if (numericWeight >= 1 && numericWeight <= 1.5) {
-        price = getRulePrice("Semi-Fondant_1_1.5kg");
-        label = `Icing (${icing} 1-1.5kg)`;
-      } else if (numericWeight >= 2 && numericWeight <= 4) {
-        price = getRulePrice("Semi-Fondant_2_4kg");
-        label = `Icing (${icing} 2-4kg)`;
-      } else if (numericWeight >= 5) {
-        price = getRulePrice("Semi-Fondant_5kg_and_above");
-        label = `Icing (${icing} 5kg+)`;
-      }
+      let price = getOptionPrice("icing", icing) * numericWeight;
       if (price > 0) {
         breakdown.push({ label: label, price: price });
         currentTotal += price;
@@ -581,7 +537,7 @@ export default function Customise() {
     // 6. Photo Count (unchanged)
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
-      const basePhotoPrice = getRulePrice("Photo Cake");
+      const basePhotoPrice = getOptionPrice("photos", "Photos");
       const price = basePhotoPrice * multiplier;
       breakdown.push({ label: `Photo Cake (${photoCount} photos)`, price });
       currentTotal += price;
@@ -988,64 +944,34 @@ export default function Customise() {
               </div>
             </div>
 
-            {/* Icing */}
+            {/* Egg/Eggless */}
             <div className="col-span-1">
               <label className="block text-base font-semibold text-gray-700 mb-2">
-                Icing Type
+                Egg Status
               </label>
               <div className="flex flex-wrap gap-3">
-                {availableIcingOptions.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setIcing(opt)}
-                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                      icing === opt
-                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                    }`}
-                    aria-pressed={icing === opt}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              {/* Conditional Promo Note */}
-              {isFondant && (
-                <p className="mt-2 text-sm font-medium text-[var(--primary-600)]">
-                  PROMO: 4kg+ Fondant cakes get 5 edible toys FREE!
-                </p>
-              )}
-            </div>
-
-            {/* Cake Type (Style) */}
-            <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
-                Cake Style
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {cakeTypeOptions.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => {
-                      if (
-                        opt === "Step Cake / Tier Cake" &&
-                        numericWeight < MIN_STEP_CAKE_WEIGHT
-                      ) {
-                        setWeightKg(MIN_STEP_CAKE_WEIGHT.toFixed(1));
-                      }
-                      setCakeType(opt);
-                    }}
-                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                      cakeType === opt
-                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                    }`}
-                    aria-pressed={cakeType === opt}
-                  >
-                    {opt}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setWithEgg(true)}
+                  className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
+                    withEgg
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                      : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
+                  }`}
+                  aria-pressed={withEgg}
+                >
+                  With Egg
+                </button>
+                <button
+                  onClick={() => setWithEgg(false)}
+                  className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
+                    !withEgg
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                      : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
+                  }`}
+                  aria-pressed={!withEgg}
+                >
+                  Eggless
+                </button>
               </div>
             </div>
 
@@ -1082,67 +1008,6 @@ export default function Customise() {
               </div>
             </div>
 
-            {/* Filling Type (CONDITIONAL) */}
-            {isFillingSectionAvailable ? (
-              <div className="col-span-1">
-                <label className="block text-base font-semibold text-gray-700 mb-2">
-                  Filling Type
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  {dependentFillingOptions.map((fillingName) => {
-                    const fillingItem = allFillingOptions.find(
-                      (o) => o.option_name === fillingName.option_name
-                    );
-                    const isSameAsFlavour = flavour === fillingName.option_name;
-
-                    if (!fillingItem) return null; // Should not happen
-
-                    const priceDisplay = isSameAsFlavour
-                      ? "FREE"
-                      : `+₹${fillingItem.base_price.toFixed(0)}/kg`;
-
-                    return (
-                      <button
-                        key={fillingItem.option_name}
-                        onClick={() => setFilling(fillingItem.option_name)}
-                        className={`p-3 rounded-xl text-sm border-2 transition-all duration-200 text-left ${
-                          filling === fillingItem.option_name
-                            ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                            : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50"
-                        }`}
-                        aria-pressed={filling === fillingItem.option_name}
-                      >
-                        <span className="block font-medium leading-snug">
-                          {fillingItem.option_name}
-                        </span>
-                        <span
-                          className="block text-xs font-bold pt-1 transition-colors duration-200"
-                          style={
-                            filling === fillingItem.option_name
-                              ? { color: "white" }
-                              : isSameAsFlavour
-                              ? { color: "green" }
-                              : { color: "red" }
-                          }
-                        >
-                          {priceDisplay}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="col-span-1">
-                <label className="block text-base font-semibold text-gray-700 mb-2">
-                  Filling Type
-                </label>
-                <p className="p-3 rounded-xl border border-gray-300 bg-gray-50 text-sm text-gray-500">
-                  Filling not available for "{flavour || "Selected Flavour"}".
-                </p>
-              </div>
-            )}
-
             {/* Shape (Buttons with Icons) */}
             <div className="lg:col-span-1">
               <label className="block text-base font-semibold text-gray-700 mb-2">
@@ -1170,35 +1035,65 @@ export default function Customise() {
               </div>
             </div>
 
-            {/* Egg/Eggless */}
+            {/* Cake Type (Style) */}
             <div className="col-span-1">
               <label className="block text-base font-semibold text-gray-700 mb-2">
-                Egg Status
+                Cake Style
               </label>
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setWithEgg(true)}
-                  className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                    withEgg
-                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                      : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                  }`}
-                  aria-pressed={withEgg}
-                >
-                  With Egg
-                </button>
-                <button
-                  onClick={() => setWithEgg(false)}
-                  className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                    !withEgg
-                      ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                      : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                  }`}
-                  aria-pressed={!withEgg}
-                >
-                  Eggless
-                </button>
+                {cakeTypeOptions.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      if (
+                        opt === "Step Cake / Tier Cake" &&
+                        numericWeight < MIN_STEP_CAKE_WEIGHT
+                      ) {
+                        setWeightKg(MIN_STEP_CAKE_WEIGHT.toFixed(1));
+                      }
+                      setCakeType(opt);
+                    }}
+                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
+                      cakeType === opt
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
+                    }`}
+                    aria-pressed={cakeType === opt}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {/* Icing */}
+            <div className="col-span-1">
+              <label className="block text-base font-semibold text-gray-700 mb-2">
+                Icing Type
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {availableIcingOptions.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setIcing(opt)}
+                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
+                      icing === opt
+                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
+                    }`}
+                    aria-pressed={icing === opt}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Conditional Promo Note */}
+              {isFondant && (
+                <p className="mt-2 text-sm font-medium text-[var(--primary-600)]">
+                  PROMO: 4kg+ Fondant cakes get 5 edible toys FREE!
+                </p>
+              )}
             </div>
 
             {/* --- ADD-ONS SECTION --- */}
