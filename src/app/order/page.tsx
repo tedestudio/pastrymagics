@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  Component,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -47,18 +54,21 @@ const AD_BANNERS = [
 
 // --- ENUM TYPES (Kept for consistency) ---
 type MenuCategory =
-  | "Bakery Specials"
-  | "Ramen & Corn Dogs"
+  | "Noodles"
+  | "Fried Rice"
   | "Soups"
   | "Starters (Dry)"
   | "Manchuria"
-  | "Noodles"
-  | "Fried Rice"
-  | "Rice Combos"
   | "Chat & Puri"
   | "North Indian Snacks"
+  | "Ramen & Corn Dogs"
   | "Continental"
-  | "Beverages";
+  | "Rice Combos"
+  | "Beverages"
+  | "Bakery Specials"
+  | "Pizza"
+  | "Sandwich"
+  | "Burger"; // Include categories from your database insertion script
 
 type ItemDiet = "Veg" | "Non-Veg" | "Egg";
 type OrderType = "Dine-In" | "TakeAway";
@@ -87,34 +97,38 @@ type MenuItemApiResponse = {
   parcel: number;
 };
 
-// Helper function to map category string to an Lucide icon
-const getCategoryIcon = (category: string | MenuCategory) => {
+export const getCategoryIcon = (
+  category: string | MenuCategory
+): React.ElementType => {
   switch (category) {
     case "Noodles":
     case "Fried Rice":
-      return Utensils;
+      return Utensils; // General utensils for main courses
     case "Soups":
       return Soup;
     case "Starters (Dry)":
-      return Drumstick;
+      return Drumstick; // Representing appetizers/finger food
     case "Manchuria":
-      return Salad;
+      return Salad; // Using salad/bowl icon for main curry items
     case "Chat & Puri":
-      return Tally1;
+      return Tally1; // Representing small portions/street food
     case "North Indian Snacks":
-      return ShoppingBag;
+    case "Sandwich":
+    case "Burger":
+      return ShoppingBag; // General takeaway/snack icon
     case "Ramen & Corn Dogs":
-      return Pizza;
     case "Continental":
-      return Home;
+      return Pizza; // General Western/fusion icon
     case "Rice Combos":
-      return Package;
+      return Package; // Representing a combined meal/package
     case "Beverages":
       return Coffee;
     case "Bakery Specials":
       return Cake;
+    case "Pizza":
+      return Pizza; // Explicit pizza icon
     default:
-      return Utensils;
+      return Component; // Component is a good generic fallback icon
   }
 };
 
