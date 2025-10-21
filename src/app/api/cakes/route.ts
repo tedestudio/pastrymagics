@@ -22,7 +22,6 @@ interface CakePayload {
   toys: string | null;
   flowers: string | null;
   deliveryTimestamp: string; // ISO 8601 string
-  filling: string | null;
   chefNotes: string | null; // NEW: Internal notes for the chef/baker
 }
 
@@ -52,7 +51,6 @@ const upsertCake = async (id: string | null, payload: CakePayload) => {
     toys,
     flowers,
     deliveryTimestamp,
-    filling,
     chefNotes, // Included new field
   } = payload;
 
@@ -61,7 +59,6 @@ const upsertCake = async (id: string | null, payload: CakePayload) => {
     weightKg,
     icing,
     flavour,
-    filling,
     cakeType,
     shape,
     message, // Customer message remains in customization

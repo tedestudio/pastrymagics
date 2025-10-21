@@ -31,7 +31,6 @@ export default function Customise() {
   const [weightKg, setWeightKg] = useState<string | null>(null);
   const [icing, setIcing] = useState<string | null>(null);
   const [flavour, setFlavour] = useState<string | null>(null);
-  const [filling, setFilling] = useState<string | null>(null);
   const [cakeType, setCakeType] = useState<string | null>(null);
   const [shape, setShape] = useState<string | null>(null);
   const [toys, setToys] = useState<ToysState>({});
@@ -152,32 +151,6 @@ export default function Customise() {
     () => isFondant && isFourKgOrMore,
     [isFondant, isFourKgOrMore]
   );
-
-  // Helper to get filling option data for UI display
-  const allFillingOptions = useMemo(() => {
-    return options.filter((o) => o.option_type === "filling");
-  }, [options]);
-
-  // CORE LOGIC: Set of flavors that have a corresponding filling option
-  const supportedFillingFlavors = useMemo(() => {
-    const fillingNames = new Set(allFillingOptions.map((o) => o.option_name));
-    return Array.from(fillingNames);
-  }, [allFillingOptions]);
-
-  // The final list of fillings available for selection (all options if the flavor is supported)
-  const dependentFillingOptions = useMemo(() => {
-    if (!flavour || !supportedFillingFlavors.includes(flavour)) {
-      return []; // Hide/disable selection if the flavor is not supported
-    }
-    // Otherwise, show all filling options (including the current flavour)
-    return allFillingOptions;
-  }, [flavour, allFillingOptions, supportedFillingFlavors]);
-
-  // Determine if the filling section should be shown at all
-  const isFillingSectionAvailable = useMemo(() => {
-    return !!flavour && supportedFillingFlavors.includes(flavour);
-  }, [flavour, supportedFillingFlavors]);
-
   // --- Icing Reset Effect (unchanged) ---
   useEffect(() => {
     if (icing && !availableIcingOptions.includes(icing)) {
@@ -194,16 +167,6 @@ export default function Customise() {
     }
   }, [cakeType, icing, availableIcingOptions]);
   // --- END Icing Reset Effect ---
-
-  // NEW EFFECT: Reset filling if flavor changes and the filling section is no longer available.
-  useEffect(() => {
-    if (!isFillingSectionAvailable) {
-      setFilling(null);
-    } else if (!filling) {
-      // Automatically set filling to match flavor if available and not yet set
-      setFilling(flavour);
-    }
-  }, [flavour, filling, isFillingSectionAvailable]);
 
   // --- VALIDATION LOGIC (updated required fields) ---
   const validationErrors = useMemo(() => {
@@ -233,7 +196,6 @@ export default function Customise() {
       !weightKg ||
       !icing ||
       !flavour ||
-      (isFillingSectionAvailable && !filling) ||
       !cakeType ||
       !shape ||
       !deliveryTimestamp
@@ -257,12 +219,10 @@ export default function Customise() {
     cakeType,
     shape,
     flavour,
-    filling,
     weightKg,
     deliveryTimestamp,
     getMinDateTime,
     minDeliveryDate,
-    isFillingSectionAvailable,
   ]);
 
   const hasErrors = useMemo(() => {
@@ -274,7 +234,6 @@ export default function Customise() {
       !!weightKg &&
       !!icing &&
       !!flavour &&
-      (!isFillingSectionAvailable || !!filling) &&
       !!cakeType &&
       !!shape &&
       !!deliveryTimestamp
@@ -283,11 +242,9 @@ export default function Customise() {
     weightKg,
     icing,
     flavour,
-    filling,
     cakeType,
     shape,
     deliveryTimestamp,
-    isFillingSectionAvailable,
   ]);
 
   const isSavable = useMemo(() => {
@@ -325,10 +282,6 @@ export default function Customise() {
             (o) => o.option_type === "flavor"
           )?.option_name;
 
-          const initialFilling = data.find(
-            (o) => o.option_type === "filling"
-          )?.option_name;
-
           const initialCakeType =
             data.find((o) => o.option_name === "Regular Cake")?.option_name ||
             data.find((o) => o.option_type === "cake_type")?.option_name;
@@ -340,7 +293,6 @@ export default function Customise() {
           setWeightKg(initialWeight || null);
           setIcing(initialIcing || null);
           setFlavour(initialFlavour || null);
-          setFilling(initialFlavour || null); // Initialize filling to match flavor default
           setCakeType(initialCakeType || null);
           setShape(initialShape || null);
 
@@ -379,12 +331,6 @@ export default function Customise() {
     const flavorBasePrice = getOptionPrice("flavor", flavour);
     const baseCakePrice = flavorBasePrice * numericWeight;
     total += baseCakePrice;
-
-    // --- Conditional Filling Price (Per kg) ---
-    if (filling && flavour && flavour !== filling) {
-      const fillingBasePrice = getOptionPrice("filling", filling);
-      total += fillingBasePrice * numericWeight;
-    }
 
     // --- Eggless Price (Multiplier) ---
     const egglessPricePerKg = getRulePrice("Eggless");
@@ -438,7 +384,6 @@ export default function Customise() {
     numericWeight,
     icing,
     flavour,
-    filling,
     cakeType,
     shape,
     withEgg,
@@ -477,21 +422,6 @@ export default function Customise() {
         price: baseCakePrice,
       });
       currentTotal += baseCakePrice;
-    }
-
-    // 2. Conditional Filling Price
-    if (filling) {
-      if (flavour && flavour !== filling) {
-        const fillingBasePrice = getOptionPrice("filling", filling);
-        const price = fillingBasePrice * numericWeight;
-        breakdown.push({
-          label: `Custom Filling (${filling}, x${numericWeight}kg)`,
-          price,
-        });
-        currentTotal += price;
-      } else {
-        breakdown.push({ label: `Filling (${filling})`, price: 0 });
-      }
     }
 
     // 3. Eggless Price (Multiplier)
@@ -583,7 +513,6 @@ export default function Customise() {
     numericWeight,
     icing,
     flavour,
-    filling,
     cakeType,
     shape,
     withEgg,
@@ -694,7 +623,6 @@ export default function Customise() {
       `Delivery Time: ${new Date(deliveryTimestamp!).toLocaleString()}`,
       `Weight: ${weightKg} kg`,
       `Flavour: ${flavour}`,
-      `Filling: ${filling}`,
       `Icing: ${icing}`,
       `Cake Style: ${cakeType}`,
       `Shape: ${shape}`,
@@ -791,7 +719,6 @@ export default function Customise() {
         weightKg,
         icing,
         flavour,
-        filling,
         cakeType,
         shape,
         message,
