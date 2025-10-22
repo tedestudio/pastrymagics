@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef, JSX } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,13 +23,14 @@ import {
   ArrowLeft,
   Component,
   CupSoda,
-  ChevronsRight, // Used for Noodles/Rice/Manchuria main course group
-  UtensilsCrossed, // Used for Starters
-  Sandwich, // Used for Sandwich/Burger group
-  Coffee as BeverageIcon, // Renaming Coffee to avoid conflict
+  ChevronsRight,
+  UtensilsCrossed,
+  Sandwich,
+  Coffee as BeverageIcon,
+  Search,
 } from "lucide-react";
 
-// --- DUMMY AD DATA (Replace with API call or real data later) ---
+// --- DUMMY AD DATA (Kept for completeness) ---
 const AD_BANNERS = [
   {
     id: "combo_special",
@@ -72,7 +73,8 @@ type MenuCategory =
   | "Thick Shake"
   | "Mojito"
   | "Chinese Main"
-  | "Chinese Starter"; // Included categories from your DB insertions
+  | "Chinese Starter"
+  | "All";
 
 type ItemDiet = "Veg" | "Non-Veg" | "Egg";
 type OrderType = "Dine-In" | "TakeAway";
@@ -101,7 +103,7 @@ type MenuItemApiResponse = {
   parcel: number;
 };
 
-// --- UPDATED CATEGORY ICON MAP ---
+// --- CATEGORY ICON MAP ---
 const getCategoryIcon = (
   category: string | MenuCategory
 ): React.ElementType => {
@@ -110,26 +112,26 @@ const getCategoryIcon = (
     case "Fried Rice":
     case "Chinese Main":
     case "Manchuria":
-      return ChevronsRight; // For main course grouping
+      return ChevronsRight;
     case "Soups":
       return Soup;
     case "Starters (Dry)":
     case "Chinese Starter":
-      return UtensilsCrossed; // Appetizers/Dry starters
+      return UtensilsCrossed;
     case "Chat & Puri":
       return Tally1;
     case "North Indian Snacks":
-      return ShoppingBag; // General snack/takeaway
+      return ShoppingBag;
     case "Ramen & Corn Dogs":
     case "Continental":
-      return Home; // General fusion/international
+      return Home;
     case "Rice Combos":
-      return Package; // Combo meals/packages
+      return Package;
     case "Beverage":
     case "Shake":
     case "Thick Shake":
     case "Mojito":
-      return CupSoda; // All cold drinks/shakes
+      return CupSoda;
     case "Pizza":
       return Pizza;
     case "Sandwich":
@@ -137,6 +139,8 @@ const getCategoryIcon = (
       return Sandwich;
     case "Bakery Specials":
       return Cake;
+    case "All":
+      return Utensils;
     default:
       return Component;
   }
@@ -149,7 +153,8 @@ const getDietColor = (diet: string | ItemDiet) => {
   return "text-gray-500";
 };
 
-// --- START OF COMPONENT ---
+// Constant for the parcel fee
+const BASE_PARCEL_FEE = 5.0;
 
 export default function OrderPage() {
   const router = useRouter();
@@ -163,16 +168,15 @@ export default function OrderPage() {
   const [consentChecked, setConsentChecked] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<
     MenuCategory | "All" | null
-  >(null);
+  >("All");
   const [isVegFilterActive, setIsVegFilterActive] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("Dine-In");
+  // 👈 NEW STATE for search term
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // NEW: State for mobile sidebar
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // REMOVED: isSidebarOpen state (No mobile modal required)
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Ref for the scrolling banner
   const bannerRef = useRef<HTMLDivElement>(null);
 
   const [touched, setTouched] = useState({
@@ -188,20 +192,16 @@ export default function OrderPage() {
 
     const bannerContainer = bannerRef.current;
 
-    // Function to scroll to the next slide
     const scrollNext = () => {
-      const { scrollLeft, clientWidth, scrollWidth } = bannerContainer;
-
-      // Calculate the index of the current slide based on scroll position
+      const { scrollLeft, clientWidth } = bannerContainer;
       const currentSlideIndex = Math.round(scrollLeft / clientWidth);
+      const totalSlides = AD_BANNERS.length;
 
       let nextScrollPosition;
 
-      if (currentSlideIndex >= AD_BANNERS.length - 1) {
-        // If at the last slide, loop back to the first
+      if (currentSlideIndex >= totalSlides - 1) {
         nextScrollPosition = 0;
       } else {
-        // Otherwise, scroll to the next slide
         nextScrollPosition = scrollLeft + clientWidth;
       }
 
@@ -211,7 +211,6 @@ export default function OrderPage() {
       });
     };
 
-    // Set interval for auto-scroll (e.g., every 4 seconds)
     const intervalId = setInterval(scrollNext, 4000);
 
     return () => clearInterval(intervalId);
@@ -254,7 +253,12 @@ export default function OrderPage() {
           });
 
           setMenuItems(flatMenu);
-          if (flatMenu.length > 0) {
+          // Set initial category to 'All'
+          const initialCategories = [
+            "All",
+            ...new Set(flatMenu.map((item) => item.category)),
+          ].sort();
+          if (initialCategories.length > 0) {
             setSelectedCategory("All");
           }
         }
@@ -266,8 +270,7 @@ export default function OrderPage() {
   const handleAdClick = (targetCategory: MenuCategory) => {
     // 1. Change the selected category
     setSelectedCategory(targetCategory);
-    setIsSidebarOpen(false); // Close sidebar on mobile after selection
-
+    setSearchTerm(""); // Clear search when navigating via banner
     // 2. Scroll the user down to the menu view (optional, but helpful)
     const menuSection = document.getElementById("menu-section");
     if (menuSection) {
@@ -276,19 +279,9 @@ export default function OrderPage() {
   };
 
   const categories = useMemo<(MenuCategory | "All")[]>(() => {
-    const cats = new Set<MenuCategory>(menuItems.map((item) => item.category));
+    const cats = new Set(menuItems.map((item) => item.category));
     return (["All", ...Array.from(cats)] as (MenuCategory | "All")[]).sort();
   }, [menuItems]);
-
-  // --- FILTERED MENU ITEMS ---
-  const displayedMenuItems = useMemo(() => {
-    return menuItems.filter((item) => {
-      const categoryMatch =
-        selectedCategory === "All" || item.category === selectedCategory;
-      const vegMatch = !isVegFilterActive || item.diet === "Veg";
-      return categoryMatch && vegMatch;
-    });
-  }, [menuItems, selectedCategory, isVegFilterActive]);
 
   // --- FORM VALIDATION LOGIC ---
   const validateForm = useCallback(() => {
@@ -318,22 +311,37 @@ export default function OrderPage() {
     setFormErrors(validateForm());
   }, [name, phone, table, cart, consentChecked, orderType, validateForm]);
 
+  // --- FILTERED MENU ITEMS ---
+  const displayedMenuItems = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return menuItems.filter((item) => {
+      const categoryMatch =
+        selectedCategory === "All" || item.category === selectedCategory;
+      const vegMatch = !isVegFilterActive || item.diet === "Veg";
+      // 👈 Search filter is now always applied
+      const searchMatch =
+        normalizedSearch === "" ||
+        item.name.toLowerCase().includes(normalizedSearch);
+
+      return categoryMatch && vegMatch && searchMatch;
+    });
+  }, [menuItems, selectedCategory, isVegFilterActive, searchTerm]); // 👈 Added searchTerm dependency
+
   // --- CART & TOTALS LOGIC ---
   const subtotal = useMemo(
     () => cart.reduce((s, it) => s + it.price * it.qty, 0),
     [cart]
   );
 
-  const dynamicParcelFee = useMemo(
+  const totalParcelFee = useMemo(
     () => cart.reduce((totalFee, item) => totalFee + item.parcel * item.qty, 0),
     [cart]
   );
 
-  const totalParcelFee = orderType === "TakeAway" ? dynamicParcelFee : 0;
-
   const total = useMemo(
-    () => subtotal + totalParcelFee,
-    [subtotal, totalParcelFee]
+    () => subtotal + (orderType === "TakeAway" ? totalParcelFee : 0),
+    [subtotal, totalParcelFee, orderType]
   );
 
   const totalItemCount = useMemo(
@@ -420,28 +428,67 @@ export default function OrderPage() {
 
   const tableNumbers = Array.from({ length: 10 }, (_, i) => `${i + 1}`);
 
+  // --- NEW SEARCH HANDLER ---
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    // Automatically set category to 'All' if a search term is entered
+    if (value.trim() !== "" && selectedCategory !== "All") {
+      setSelectedCategory("All");
+    }
+  };
+
   // --- RENDER ---
+
+  // Function to render the quantity controls or the 'Add' button
+  const renderQuantityControls = (it: Item, currentQty: number) => {
+    if (currentQty > 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2 sm:mt-0">
+          <button
+            className="h-8 w-8 rounded-full border border-gray-300 text-xl text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
+            onClick={() => updateQty(it.id, currentQty - 1)}
+          >
+            -
+          </button>
+          <span className="w-6 text-center text-lg font-bold">
+            {currentQty}
+          </span>
+          <button
+            className="h-8 w-8 rounded-full border border-[var(--primary)] bg-[var(--primary)] text-white text-xl hover:bg-[var(--primary-600)] transition-colors flex items-center justify-center"
+            onClick={() => updateQty(it.id, currentQty + 1)}
+          >
+            +
+          </button>
+        </div>
+      );
+    } else {
+      return (
+        <button
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--primary)] text-white transition-colors hover:bg-[var(--primary-600)] shadow-md mt-2 sm:mt-0"
+          onClick={() => addToCart(it)}
+        >
+          Add
+        </button>
+      );
+    }
+  };
 
   return (
     <main className="px-4 py-6 md:px-6 md:py-8 max-w-7xl mx-auto pb-24">
-      {/* HEADER AND MOBILE MENU BUTTON */}
+      {/* HEADER: Removed hamburger button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-[var(--primary)]">
           Digital Menu
         </h1>
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="lg:hidden p-2 rounded-lg bg-[var(--primary)] text-white shadow-md"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
       </div>
 
       <p className="mt-2 text-foreground/60 hidden sm:block">
         Browse, customize, and checkout using the cart button below.
       </p>
 
-      {/* --- SCROLLING AD BANNER --- */}
+      {/* --- SCROLLING AD BANNER --- (unchanged) */}
       <div
         ref={bannerRef}
         className="mt-6 mb-8 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-xl shadow-lg bg-gray-100"
@@ -469,112 +516,48 @@ export default function OrderPage() {
       {/* --------------------------------- */}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* ---------------------------------- */}
-        {/* Left Sidebar: Categories and Filters */}
-        {/* ---------------------------------- */}
-
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block col-span-1 rounded-xl border border-gray-200 bg-white p-4 shadow-lg h-full sticky top-6">
-          <h2 className="text-xl font-bold pb-3 border-b border-gray-100 mb-2">
-            Menu Sections
-          </h2>
-          <div className="py-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Leaf
-                className={`w-6 h-6 transition-colors ${
-                  isVegFilterActive ? "text-green-600" : "text-gray-400"
-                }`}
-              />
-              <span className="text-base font-semibold">Veg Only</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isVegFilterActive}
-                onChange={(e) => setIsVegFilterActive(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-12 h-7 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
-            </label>
-          </div>
-          <div className="flex flex-col gap-1 mt-3 pr-2">
-            {categories.map((cat) => {
-              const IconComponent = getCategoryIcon(cat);
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`flex items-center space-x-3 p-3 rounded-lg text-base font-medium transition-all duration-200 ${
-                    selectedCategory === cat
-                      ? "bg-[var(--primary)] text-white shadow-md"
-                      : "text-foreground hover:bg-gray-50 hover:text-[var(--primary)]"
-                  }`}
-                >
-                  <IconComponent className="w-5 h-5" />
-                  <span>{cat}</span>
-                </button>
-              );
-            })}
-          </div>
-          {/* Veg Filter Switch */}
-        </aside>
-
-        {/* Mobile Sidebar Modal */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 lg:hidden bg-black bg-opacity-50 transition-opacity"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <aside
-              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
-              className="absolute left-0 top-0 h-full w-3/4 bg-white p-4 shadow-2xl transform transition-transform duration-300"
-            >
-              <div className="flex justify-between items-center border-b pb-3 mb-4">
-                <h2 className="text-xl font-bold text-[var(--primary)]">
-                  Menu Sections
-                </h2>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-1 max-h-[70vh] overflow-y-auto pr-2">
-                {categories.map((cat) => {
-                  const IconComponent = getCategoryIcon(cat);
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setIsSidebarOpen(false); // Close after selection
-                      }}
-                      className={`flex items-center space-x-3 p-3 rounded-lg text-base font-medium transition-all duration-200 ${
-                        selectedCategory === cat
-                          ? "bg-[var(--primary)] text-white shadow-md"
-                          : "text-foreground hover:bg-gray-50 hover:text-[var(--primary)]"
-                      }`}
-                    >
-                      <IconComponent className="w-5 h-5" />
-                      <span>{cat}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Veg Filter Switch - Mobile */}
-              <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Leaf
-                    className={`w-6 h-6 transition-colors ${
-                      isVegFilterActive ? "text-green-600" : "text-gray-400"
+        {/* --- LEFT SECTION: CATEGORY STRIP (Mobile/Tablet and Desktop) --- */}
+        <aside className="lg:col-span-1 rounded-xl border border-gray-200 bg-white shadow-lg h-fit">
+          <div className="hidden lg:block p-4 sticky top-6">
+            {/* Desktop Vertical View */}
+            <h2 className="text-xl font-bold pb-3 border-b border-gray-100 mb-2">
+              Menu Sections
+            </h2>
+            <div className="flex flex-col gap-1 mt-3 max-h-[70vh] overflow-y-auto pr-2">
+              {categories.map((cat) => {
+                const IconComponent = getCategoryIcon(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setSearchTerm(""); // Clear search on category change
+                    }}
+                    className={`flex items-center space-x-3 p-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                      selectedCategory === cat
+                        ? "bg-[var(--primary)] text-white shadow-md"
+                        : "text-foreground hover:bg-gray-50 hover:text-[var(--primary)]"
                     }`}
-                  />
-                  <span className="text-base font-semibold">
-                    Veg Only Filter
-                  </span>
-                </div>
+                  >
+                    <IconComponent className="w-5 h-5" />
+                    <span>{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile/Small Tablet Horizontal Scroll Strip */}
+          <div className="block lg:hidden p-3 border-b border-gray-200">
+            <div className="flex items-center justify-between pb-3">
+              <h2 className="text-lg font-bold">Categories</h2>
+              {/* Veg Filter Switch - Mobile Header */}
+              <div className="flex items-center space-x-2">
+                <Leaf
+                  className={`w-5 h-5 transition-colors ${
+                    isVegFilterActive ? "text-green-600" : "text-gray-400"
+                  }`}
+                />
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -582,87 +565,106 @@ export default function OrderPage() {
                     onChange={(e) => setIsVegFilterActive(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-12 h-7 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
+                  <div className="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
                 </label>
               </div>
-            </aside>
-          </div>
-        )}
-
-        {/* ---------------------------------- */}
-        {/* Right Section: Menu Items */}
-        {/* ---------------------------------- */}
-        <section
-          id="menu-section"
-          className="lg:col-span-3 rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-lg"
-        >
-          <h2 className="text-xl sm:text-2xl font-bold border-b pb-3 mb-6 text-foreground/80">
-            {selectedCategory || "All Items"}
-          </h2>
-
-          {/* List of Items */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[120vh] overflow-y-auto pr-2">
-            {displayedMenuItems.map((it) => {
-              const current = cart.find((c) => c.id === it.id)?.qty ?? 0;
-              const dietColor = getDietColor(it.diet);
-              const IconComponent = it.diet === "Egg" ? Egg : Leaf;
-
-              return (
-                <div
-                  key={it.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  <div className="flex items-center gap-4 flex-grow">
-                    <img
-                      src={it.image}
-                      alt={it.name}
-                      className="h-16 w-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
-                    />
-                    <div>
-                      <p className="font-semibold text-base flex items-center gap-2">
-                        {it.name}
-                        <IconComponent className={`w-4 h-4 ${dietColor}`} />
-                      </p>
-                      <p className="text-sm font-medium text-foreground mt-1">
-                        ₹{it.price.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                    <button
-                      className="h-8 w-8 rounded-full border border-gray-300 text-xl text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
-                      onClick={() => updateQty(it.id, Math.max(0, current - 1))}
-                    >
-                      -
-                    </button>
-                    <span className="w-6 text-center text-lg font-bold">
-                      {current}
+            </div>
+            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+              {categories.map((cat) => {
+                const IconComponent = getCategoryIcon(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setSearchTerm(""); // Clear search on category change
+                    }}
+                    className={`flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 p-2 rounded-xl text-xs font-medium transition-all duration-200 ${
+                      selectedCategory === cat
+                        ? "bg-[var(--primary)] text-white shadow-md"
+                        : "bg-gray-100 text-foreground hover:bg-gray-200"
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5 mb-1" />
+                    <span className="text-center leading-tight">
+                      {cat.replace(" ", "\n")}
                     </span>
-                    <button
-                      className="h-8 w-8 rounded-full border border-[var(--primary)] bg-[var(--primary)] text-white text-xl hover:bg-[var(--primary-600)] transition-colors flex items-center justify-center"
-                      onClick={() =>
-                        current === 0
-                          ? addToCart(it)
-                          : updateQty(it.id, current + 1)
-                      }
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-            {displayedMenuItems.length === 0 && (
-              <p className="text-center text-foreground/60 p-10 border rounded-xl lg:col-span-2">
-                No items found in this section or matching your filters.
-              </p>
-            )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </section>
-      </div>
+        </aside>
 
+        {/* --- RIGHT SECTION: MENU ITEMS AND CART --- */}
+        <div className="lg:col-span-3 grid grid-cols-1 gap-8">
+          {/* Middle: Menu Items (2/3 width) */}
+          <section
+            id="menu-section"
+            className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-lg"
+          >
+            {/* START: Modified Header with Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground/80 mb-3 sm:mb-0">
+                {selectedCategory || "All Items"}
+              </h2>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search item..."
+                  value={searchTerm}
+                  // 👈 UPDATED onChange HANDLER
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                />
+              </div>
+            </div>
+            {/* END: Modified Header with Search Bar */}
+
+            {/* List of Items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+              {displayedMenuItems.map((it) => {
+                const current = cart.find((c) => c.id === it.id)?.qty ?? 0;
+                const dietColor = getDietColor(it.diet);
+                const IconComponent = it.diet === "Egg" ? Egg : Leaf;
+
+                return (
+                  <div
+                    key={it.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-4 flex-grow">
+                      <img
+                        src={it.image}
+                        alt={it.name}
+                        className="h-16 w-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                      />
+                      <div>
+                        <p className="font-semibold text-base flex items-center gap-2">
+                          {it.name}
+                          <IconComponent className={`w-4 h-4 ${dietColor}`} />
+                        </p>
+                        <p className="text-sm font-medium text-foreground mt-1">
+                          ₹{it.price.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity Controls - Logic moved to a helper function */}
+                    {renderQuantityControls(it, current)}
+                  </div>
+                );
+              })}
+              {displayedMenuItems.length === 0 && (
+                <p className="text-center text-foreground/60 p-10 border rounded-xl lg:col-span-2">
+                  No items found in this section or matching your filters.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
       {/* --- FLOATING CART SHEET (Revised) --- */}
       {cart.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-white border-t-2 border-[var(--primary)] shadow-2xl transition-all duration-300">
@@ -684,7 +686,7 @@ export default function OrderPage() {
         </div>
       )}
 
-      {/* --- ORDER MODAL / DIALOG BOX --- (No functional changes needed here, only aesthetic) */}
+      {/* --- ORDER MODAL / DIALOG BOX --- (Modal remains hidden until triggered) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 bg-opacity-60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-100">
@@ -704,7 +706,7 @@ export default function OrderPage() {
             <h3 className="text-lg font-semibold mb-3 border-b pb-2">
               Items ({totalItemCount})
             </h3>
-            <div className="space-y-3 max-h-40 overflow-y-auto mb-4 pr-2">
+            <div className="space-y-3 max-h-40 overflow-y-auto pr-2">
               {cart.map((c) => (
                 <div
                   key={c.id}

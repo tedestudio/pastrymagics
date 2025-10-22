@@ -55,6 +55,10 @@ export default function Customise() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  const isIcingIncompatibleWithPastry = useMemo(() => {
+    // Pastry is incompatible with structural icings (Fondant/Semi-Fondant)
+    return icing === "Fondant" || icing === "Semi-Fondant";
+  }, [icing]);
 
   // --- Delivery Date and Time ---
   const [deliveryTimestamp, setDeliveryTimestamp] = useState<string | null>(
@@ -238,14 +242,7 @@ export default function Customise() {
       !!shape &&
       !!deliveryTimestamp
     );
-  }, [
-    weightKg,
-    icing,
-    flavour,
-    cakeType,
-    shape,
-    deliveryTimestamp,
-  ]);
+  }, [weightKg, icing, flavour, cakeType, shape, deliveryTimestamp]);
 
   const isSavable = useMemo(() => {
     return isComplete && !hasErrors;
@@ -530,7 +527,8 @@ export default function Customise() {
       .map((o) => ({
         name: o.option_name,
         price: o.base_price,
-      }));
+      }))
+      .sort((a, b) => a.price - b.price);
   }, [options]);
 
   // --- UTILITY FUNCTIONS (mostly unchanged) ---
@@ -962,37 +960,6 @@ export default function Customise() {
               </div>
             </div>
 
-            {/* Cake Type (Style) */}
-            <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
-                Cake Style
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {cakeTypeOptions.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => {
-                      if (
-                        opt === "Step Cake / Tier Cake" &&
-                        numericWeight < MIN_STEP_CAKE_WEIGHT
-                      ) {
-                        setWeightKg(MIN_STEP_CAKE_WEIGHT.toFixed(1));
-                      }
-                      setCakeType(opt);
-                    }}
-                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                      cakeType === opt
-                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                    }`}
-                    aria-pressed={cakeType === opt}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Icing */}
             <div className="col-span-1">
               <label className="block text-base font-semibold text-gray-700 mb-2">
@@ -1021,6 +988,52 @@ export default function Customise() {
                   PROMO: 4kg+ Fondant cakes get 5 edible toys FREE!
                 </p>
               )}
+            </div>
+
+            {/* Cake Type (Style) */}
+            <div>
+              <label className="block text-sm font-medium">Cake Style</label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {cakeTypeOptions.map((opt) => {
+                  const isPastryOption = opt === "Pastry";
+                  const isDisabled =
+                    isPastryOption && isIcingIncompatibleWithPastry;
+
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        if (isDisabled) {
+                          alert(
+                            "Pastry style is not available with Fondant or Semi-Fondant icing."
+                          );
+                          return;
+                        }
+
+                        // Logic to snap weight to 3kg if step cake is selected and weight is too low
+                        if (
+                          opt === "Step Cake / Tier Cake" &&
+                          numericWeight < MIN_STEP_CAKE_WEIGHT
+                        ) {
+                          setWeightKg(MIN_STEP_CAKE_WEIGHT.toString());
+                        }
+                        setCakeType(opt);
+                      }}
+                      className={`px-3 py-2 rounded-md text-sm border transition-colors duration-200 ${
+                        isDisabled
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                          : cakeType === opt
+                          ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                          : "bg-white text-foreground border-[var(--muted)] hover:bg-[var(--muted)]/50"
+                      }`}
+                      aria-pressed={cakeType === opt}
+                      disabled={isDisabled}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* --- ADD-ONS SECTION --- */}
