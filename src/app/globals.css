@@ -35,6 +35,7 @@
   --primary-50: #fff1f3;
   --accent: #f5c6cf;
   --muted: #f9ede7;
+  overscroll-behavior: none;
 }
 
 @theme inline {

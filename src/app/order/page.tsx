@@ -171,10 +171,7 @@ export default function OrderPage() {
   >("All");
   const [isVegFilterActive, setIsVegFilterActive] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("Dine-In");
-  // 👈 NEW STATE for search term
   const [searchTerm, setSearchTerm] = useState("");
-
-  // REMOVED: isSidebarOpen state (No mobile modal required)
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -272,9 +269,9 @@ export default function OrderPage() {
     setSelectedCategory(targetCategory);
     setSearchTerm(""); // Clear search when navigating via banner
     // 2. Scroll the user down to the menu view (optional, but helpful)
-    const menuSection = document.getElementById("menu-section");
+    const menuSection = document.getElementById("menu-section-container");
     if (menuSection) {
-      menuSection.scrollIntoView({ behavior: "smooth" });
+      // For a non-scrolling viewport, this is generally not needed.
     }
   };
 
@@ -319,14 +316,13 @@ export default function OrderPage() {
       const categoryMatch =
         selectedCategory === "All" || item.category === selectedCategory;
       const vegMatch = !isVegFilterActive || item.diet === "Veg";
-      // 👈 Search filter is now always applied
       const searchMatch =
         normalizedSearch === "" ||
         item.name.toLowerCase().includes(normalizedSearch);
 
       return categoryMatch && vegMatch && searchMatch;
     });
-  }, [menuItems, selectedCategory, isVegFilterActive, searchTerm]); // 👈 Added searchTerm dependency
+  }, [menuItems, selectedCategory, isVegFilterActive, searchTerm]);
 
   // --- CART & TOTALS LOGIC ---
   const subtotal = useMemo(
@@ -445,18 +441,18 @@ export default function OrderPage() {
   const renderQuantityControls = (it: Item, currentQty: number) => {
     if (currentQty > 0) {
       return (
-        <div className="flex items-center gap-2 mt-2 sm:mt-0">
+        <div className="flex items-center gap-2 mt-1 sm:mt-0">
           <button
-            className="h-8 w-8 rounded-full border border-gray-300 text-xl text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
+            className="h-6 w-6 rounded-full border border-gray-300 text-sm text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
             onClick={() => updateQty(it.id, currentQty - 1)}
           >
             -
           </button>
-          <span className="w-6 text-center text-lg font-bold">
+          <span className="w-4 text-center text-sm font-bold">
             {currentQty}
           </span>
           <button
-            className="h-8 w-8 rounded-full border border-[var(--primary)] bg-[var(--primary)] text-white text-xl hover:bg-[var(--primary-600)] transition-colors flex items-center justify-center"
+            className="h-6 w-6 rounded-full border border-[var(--primary)] bg-[var(--primary)] text-white text-sm hover:bg-[var(--primary-600)] transition-colors flex items-center justify-center"
             onClick={() => updateQty(it.id, currentQty + 1)}
           >
             +
@@ -466,7 +462,7 @@ export default function OrderPage() {
     } else {
       return (
         <button
-          className="px-4 py-2 text-sm font-semibold rounded-lg bg-[var(--primary)] text-white transition-colors hover:bg-[var(--primary-600)] shadow-md mt-2 sm:mt-0"
+          className="px-3 py-1 text-sm font-semibold rounded-lg bg-[var(--primary)] text-white transition-colors hover:bg-[var(--primary-600)] shadow-md mt-1 sm:mt-0"
           onClick={() => addToCart(it)}
         >
           Add
@@ -476,37 +472,38 @@ export default function OrderPage() {
   };
 
   return (
-    <main className="px-4 py-6 md:px-6 md:py-8 max-w-7xl mx-auto pb-24">
-      {/* HEADER: Removed hamburger button */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[var(--primary)]">
-          Digital Menu
+    // 1. MAIN CONTAINER: Use h-screen and overflow-hidden to lock the viewport scroll.
+    <main className="px-4 py-3 md:px-6 md:py-4 max-w-7xl mx-auto h-[90vh] lg:h-screen flex flex-col overflow-hidden">
+      {/* HEADER: flex-shrink-0 */}
+      <div className="flex justify-between items-center flex-shrink-0">
+        <h1 className="text-xl text-[var(--primary)]">
+          Order at your Table
         </h1>
       </div>
 
-      <p className="mt-2 text-foreground/60 hidden sm:block">
+      <p className="mt-1 text-foreground/60 hidden sm:block text-xs flex-shrink-0">
         Browse, customize, and checkout using the cart button below.
       </p>
 
-      {/* --- SCROLLING AD BANNER --- (unchanged) */}
+      {/* --- SCROLLING AD BANNER --- flex-shrink-0 */}
       <div
         ref={bannerRef}
-        className="mt-6 mb-8 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-xl shadow-lg bg-gray-100"
+        className="mt-3 mb-5 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-lg shadow-md bg-gray-100 flex-shrink-0"
         style={{ scrollSnapType: "x mandatory" }}
       >
         {AD_BANNERS.map((ad) => (
           <div
             key={ad.id}
             onClick={() => handleAdClick(ad.targetCategory)}
-            className="flex-shrink-0 w-full snap-center relative h-16 md:h-24 cursor-pointer"
+            className="flex-shrink-0 w-full snap-center relative h-10 md:h-12 cursor-pointer"
             style={{
               backgroundImage: `url(${ad.image})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           >
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-2">
-              <p className="text-white text-base md:text-xl font-extrabold text-center tracking-wide">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-1">
+              <p className="text-xs md:text-sm font-extrabold text-white text-center tracking-wide">
                 {ad.text}
               </p>
             </div>
@@ -515,15 +512,20 @@ export default function OrderPage() {
       </div>
       {/* --------------------------------- */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* --- LEFT SECTION: CATEGORY STRIP (Mobile/Tablet and Desktop) --- */}
-        <aside className="lg:col-span-1 rounded-xl border border-gray-200 bg-white shadow-lg h-fit">
-          <div className="hidden lg:block p-4 sticky top-6">
-            {/* Desktop Vertical View */}
-            <h2 className="text-xl font-bold pb-3 border-b border-gray-100 mb-2">
+      {/* 2. MIDDLE CONTENT GRID: Use flex-grow and overflow-y-hidden */}
+      <div
+        id="menu-section-container"
+        className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-grow overflow-y-hidden"
+      >
+        {/* --- LEFT SECTION: CATEGORY STRIP (Desktop Sidebar) --- */}
+        <aside className="lg:col-span-1 rounded-lg border border-gray-200 bg-white shadow-md h-full flex flex-col">
+          <div className="hidden lg:block p-3 h-full flex flex-col">
+            {/* Header: flex-shrink-0 */}
+            <h2 className="text-sm font-bold pb-2 border-b border-gray-100 mb-2 flex-shrink-0">
               Menu Sections
             </h2>
-            <div className="flex flex-col gap-1 mt-3 max-h-[70vh] overflow-y-auto pr-2">
+            {/* Category List: Use flex-grow and overflow-y-auto to allow scrolling */}
+            <div className="flex flex-col gap-1 mt-1 overflow-y-auto flex-grow pr-1">
               {categories.map((cat) => {
                 const IconComponent = getCategoryIcon(cat);
                 return (
@@ -531,15 +533,15 @@ export default function OrderPage() {
                     key={cat}
                     onClick={() => {
                       setSelectedCategory(cat);
-                      setSearchTerm(""); // Clear search on category change
+                      setSearchTerm("");
                     }}
-                    className={`flex items-center space-x-3 p-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    className={`flex items-center space-x-2 p-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                       selectedCategory === cat
-                        ? "bg-[var(--primary)] text-white shadow-md"
+                        ? "bg-[var(--primary)] text-white shadow-sm"
                         : "text-foreground hover:bg-gray-50 hover:text-[var(--primary)]"
                     }`}
                   >
-                    <IconComponent className="w-5 h-5" />
+                    <IconComponent className="w-3 h-3" />
                     <span>{cat}</span>
                   </button>
                 );
@@ -547,14 +549,13 @@ export default function OrderPage() {
             </div>
           </div>
 
-          {/* Mobile/Small Tablet Horizontal Scroll Strip */}
-          <div className="block lg:hidden p-3 border-b border-gray-200">
-            <div className="flex items-center justify-between pb-3">
-              <h2 className="text-lg font-bold">Categories</h2>
-              {/* Veg Filter Switch - Mobile Header */}
-              <div className="flex items-center space-x-2">
+          {/* Mobile/Small Tablet Horizontal Scroll Strip - flex-shrink-0 */}
+          <div className="block lg:hidden p-2 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="text-sm font-bold">Categories</h2>
+              <div className="flex items-center space-x-1">
                 <Leaf
-                  className={`w-5 h-5 transition-colors ${
+                  className={`w-3 h-3 transition-colors ${
                     isVegFilterActive ? "text-green-600" : "text-gray-400"
                   }`}
                 />
@@ -565,11 +566,11 @@ export default function OrderPage() {
                     onChange={(e) => setIsVegFilterActive(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full shadow-inner" />
+                  <div className="w-8 h-4 bg-gray-300 rounded-full peer-checked:bg-green-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-3 after:w-3 after:rounded-full after:transition-all peer-checked:after:translate-x-4 shadow-inner" />
                 </label>
               </div>
             </div>
-            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+            <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
               {categories.map((cat) => {
                 const IconComponent = getCategoryIcon(cat);
                 return (
@@ -577,15 +578,15 @@ export default function OrderPage() {
                     key={cat}
                     onClick={() => {
                       setSelectedCategory(cat);
-                      setSearchTerm(""); // Clear search on category change
+                      setSearchTerm("");
                     }}
-                    className={`flex-shrink-0 flex flex-col items-center justify-center w-20 h-20 p-2 rounded-xl text-xs font-medium transition-all duration-200 ${
+                    className={`flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 p-1 rounded-lg text-[10px] font-medium transition-all duration-200 leading-tight ${
                       selectedCategory === cat
                         ? "bg-[var(--primary)] text-white shadow-md"
                         : "bg-gray-100 text-foreground hover:bg-gray-200"
                     }`}
                   >
-                    <IconComponent className="w-5 h-5 mb-1" />
+                    <IconComponent className="w-3 h-3 mb-0.5" />
                     <span className="text-center leading-tight">
                       {cat.replace(" ", "\n")}
                     </span>
@@ -596,34 +597,32 @@ export default function OrderPage() {
           </div>
         </aside>
 
-        {/* --- RIGHT SECTION: MENU ITEMS AND CART --- */}
-        <div className="lg:col-span-3 grid grid-cols-1 gap-8">
-          {/* Middle: Menu Items (2/3 width) */}
+        {/* --- RIGHT SECTION: MENU ITEMS (Main Content) --- */}
+        <div className="lg:col-span-3 h-full overflow-y-auto">
+          {/* Menu Items Section: h-full and flex-col */}
           <section
             id="menu-section"
-            className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-lg"
+            className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-md h-full flex flex-col"
           >
-            {/* START: Modified Header with Search Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground/80 mb-3 sm:mb-0">
+            {/* Header/Search: flex-shrink-0 */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-2 mb-3 flex-shrink-0">
+              <h2 className="text-base font-bold text-foreground/80 mb-2 sm:mb-0">
                 {selectedCategory || "All Items"}
               </h2>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div className="relative w-full sm:w-60">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search item..."
                   value={searchTerm}
-                  // 👈 UPDATED onChange HANDLER
                   onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                 />
               </div>
             </div>
-            {/* END: Modified Header with Search Bar */}
 
-            {/* List of Items */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+            {/* List of Items: Crucial: flex-grow and overflow-y-auto to enable scrolling */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 overflow-y-auto pr-1 flex-grow">
               {displayedMenuItems.map((it) => {
                 const current = cart.find((c) => c.id === it.id)?.qty ?? 0;
                 const dietColor = getDietColor(it.diet);
@@ -632,32 +631,31 @@ export default function OrderPage() {
                 return (
                   <div
                     key={it.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white p-4 transition-all duration-200 shadow-sm hover:shadow-md"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-lg border border-gray-100 bg-white p-2 transition-all duration-200 shadow-sm hover:shadow-md"
                   >
-                    <div className="flex items-center gap-4 flex-grow">
+                    <div className="flex items-center gap-2 flex-grow">
                       <img
                         src={it.image}
                         alt={it.name}
-                        className="h-16 w-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                        className="h-10 w-10 rounded-md object-cover border border-gray-200 flex-shrink-0"
                       />
                       <div>
-                        <p className="font-semibold text-base flex items-center gap-2">
+                        <p className="font-semibold text-xs flex items-center gap-1">
                           {it.name}
-                          <IconComponent className={`w-4 h-4 ${dietColor}`} />
+                          <IconComponent className={`w-3 h-3 ${dietColor}`} />
                         </p>
-                        <p className="text-sm font-medium text-foreground mt-1">
+                        <p className="text-xs font-medium text-foreground/80 mt-0.5">
                           ₹{it.price.toFixed(2)}
                         </p>
                       </div>
                     </div>
 
-                    {/* Quantity Controls - Logic moved to a helper function */}
                     {renderQuantityControls(it, current)}
                   </div>
                 );
               })}
               {displayedMenuItems.length === 0 && (
-                <p className="text-center text-foreground/60 p-10 border rounded-xl lg:col-span-2">
+                <p className="text-center text-foreground/60 p-6 border rounded-lg lg:col-span-2 text-xs">
                   No items found in this section or matching your filters.
                 </p>
               )}
@@ -665,22 +663,21 @@ export default function OrderPage() {
           </section>
         </div>
       </div>
-      {/* --- FLOATING CART SHEET (Revised) --- */}
+      {/* 3. FLOATING CART SHEET - fixed position, flex-shrink-0 */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-white border-t-2 border-[var(--primary)] shadow-2xl transition-all duration-300">
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-2 bg-white border-t-2 border-[var(--primary)] shadow-2xl flex-shrink-0">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <ShoppingBag className="w-6 h-6 text-[var(--primary)]" />
-              <span className="text-lg font-semibold text-foreground">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-[var(--primary)]" />
+              <span className="text-sm font-semibold text-foreground">
                 {totalItemCount} Items
               </span>
             </div>
-            {/* NEW: View Cart Button */}
             <button
               onClick={openModal}
-              className="flex items-center justify-center px-4 py-2 rounded-xl bg-[var(--primary)] text-white font-bold text-base shadow-md transition-colors hover:bg-[var(--primary-600)]"
+              className="flex items-center justify-center px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white font-bold text-xs shadow-md transition-colors hover:bg-[var(--primary-600)]"
             >
-              View Cart <span className="ml-2">₹{total.toFixed(2)}</span>
+              View Cart <span className="ml-1.5">₹{total.toFixed(2)}</span>
             </button>
           </div>
         </div>
@@ -689,32 +686,32 @@ export default function OrderPage() {
       {/* --- ORDER MODAL / DIALOG BOX --- (Modal remains hidden until triggered) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 bg-opacity-60 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-100">
-            <div className="flex justify-between items-center border-b pb-3 mb-4">
-              <h2 className="text-2xl font-bold text-[var(--primary)]">
+          <div className="bg-white rounded-lg shadow-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-100">
+            <div className="flex justify-between items-center border-b pb-2 mb-3">
+              <h2 className="text-lg font-bold text-[var(--primary)]">
                 Complete Your Order
               </h2>
               <button
                 onClick={closeModal}
                 className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
               >
-                <X className="w-6 h-6" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* 1. Item Review & Modification */}
-            <h3 className="text-lg font-semibold mb-3 border-b pb-2">
+            {/* 1. Item Review & Modification - h3 reduced */}
+            <h3 className="text-sm font-semibold mb-2 border-b pb-1">
               Items ({totalItemCount})
             </h3>
-            <div className="space-y-3 max-h-40 overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
               {cart.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between gap-3 border-b border-dashed border-gray-100 pb-2 last:border-b-0"
+                  className="flex items-center justify-between gap-2 border-b border-dashed border-gray-100 pb-1 last:border-b-0"
                 >
                   <div className="flex-grow">
-                    <p className="font-medium text-sm">{c.name}</p>
-                    <p className="text-xs text-foreground/60">
+                    <p className="font-medium text-xs">{c.name}</p>
+                    <p className="text-[10px] text-foreground/60">
                       @ ₹{c.price.toFixed(2)}
                       {c.parcel > 0 && orderType === "TakeAway" && (
                         <span> (+₹{c.parcel.toFixed(0)} Parcel)</span>
@@ -722,26 +719,26 @@ export default function OrderPage() {
                     </p>
                   </div>
 
-                  {/* Quantity Controls in Modal */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Quantity Controls in Modal - size reduced */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
-                      className="h-6 w-6 rounded-full border border-gray-300 text-base text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
+                      className="h-4 w-4 rounded-full border border-gray-300 text-xs text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
                       onClick={() => updateQty(c.id, c.qty - 1)}
                     >
                       -
                     </button>
-                    <span className="w-4 text-center text-sm font-bold">
+                    <span className="w-3 text-center text-xs font-bold">
                       {c.qty}
                     </span>
                     <button
-                      className="h-6 w-6 rounded-full border border-gray-300 text-base text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
+                      className="h-4 w-4 rounded-full border border-gray-300 text-xs text-foreground hover:bg-gray-100 transition-colors flex items-center justify-center"
                       onClick={() => updateQty(c.id, c.qty + 1)}
                     >
                       +
                     </button>
                   </div>
 
-                  <div className="font-bold text-sm text-[var(--primary)] flex-shrink-0 w-16 text-right">
+                  <div className="font-bold text-xs text-[var(--primary)] flex-shrink-0 w-10 text-right">
                     ₹
                     {(
                       c.price * c.qty +
@@ -752,43 +749,43 @@ export default function OrderPage() {
               ))}
             </div>
 
-            {/* 2. Order Type Selector */}
-            <div className="mb-4 pt-2 border-t">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {/* 2. Order Type Selector - text size reduced */}
+            <div className="mb-3 pt-2 border-t">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Service Option:
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setOrderType("Dine-In")}
-                  className={`flex items-center justify-center p-3 rounded-xl text-sm font-semibold transition-all border-2 ${
+                  className={`flex items-center justify-center p-2 rounded-lg text-xs font-semibold transition-all border-2 ${
                     orderType === "Dine-In"
-                      ? "bg-green-500 text-white border-green-500 shadow-md"
+                      ? "bg-green-500 text-white border-green-500 shadow-sm"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  <Home className="w-4 h-4 mr-2" /> Dine-In
+                  <Home className="w-3 h-3 mr-1" /> Dine-In
                 </button>
                 <button
                   onClick={() => setOrderType("TakeAway")}
-                  className={`flex items-center justify-center p-3 rounded-xl text-sm font-semibold transition-all border-2 ${
+                  className={`flex items-center justify-center p-2 rounded-lg text-xs font-semibold transition-all border-2 ${
                     orderType === "TakeAway"
-                      ? "bg-red-500 text-white border-red-500 shadow-md"
+                      ? "bg-red-500 text-white border-red-500 shadow-sm"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  <Package className="w-4 h-4 mr-2" /> TakeAway
+                  <Package className="w-3 h-3 mr-1" /> TakeAway
                 </button>
               </div>
             </div>
 
-            {/* 3. Financial Summary */}
-            <div className="space-y-2 py-4 border-t border-b mb-4">
-              <div className="flex items-center justify-between text-base">
+            {/* 3. Financial Summary - text size reduced */}
+            <div className="space-y-1 py-3 border-t border-b mb-3">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600">Subtotal</span>
                 <span className="font-bold">₹{subtotal.toFixed(2)}</span>
               </div>
 
-              <div className="flex items-center justify-between text-base">
+              <div className="flex items-center justify-between text-xs">
                 <span
                   className={`transition-colors ${
                     orderType === "TakeAway"
@@ -796,7 +793,7 @@ export default function OrderPage() {
                       : "text-gray-400"
                   }`}
                 >
-                  Parcel Fee (for {totalItemCount} items)
+                  Parcel Fee ({totalItemCount})
                 </span>
                 <span
                   className={`font-bold transition-colors ${
@@ -807,16 +804,16 @@ export default function OrderPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xl font-bold">Grand Total</span>
-                <span className="font-extrabold text-2xl text-[var(--primary)]">
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm font-bold">Grand Total</span>
+                <span className="font-extrabold text-lg text-[var(--primary)]">
                   ₹{total.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            {/* 4. Customer Details & Validation (Simplified) */}
-            <div className="grid grid-cols-1 gap-3">
+            {/* 4. Customer Details & Validation (Simplified) - input size reduced */}
+            <div className="grid grid-cols-1 gap-2">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -825,10 +822,10 @@ export default function OrderPage() {
                   setFormErrors(validateForm());
                 }}
                 placeholder="Your Name"
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm w-full"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs w-full"
               />
               {touched.name && formErrors.name && (
-                <p className="text-red-500 text-xs">{formErrors.name}</p>
+                <p className="text-red-500 text-[10px]">{formErrors.name}</p>
               )}
 
               <input
@@ -840,10 +837,10 @@ export default function OrderPage() {
                 }}
                 placeholder="Phone Number (10 Digits)"
                 type="tel"
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm w-full"
+                className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs w-full"
               />
               {touched.phone && formErrors.phone && (
-                <p className="text-red-500 text-xs">{formErrors.phone}</p>
+                <p className="text-red-500 text-[10px]">{formErrors.phone}</p>
               )}
 
               {orderType === "Dine-In" && (
@@ -859,7 +856,7 @@ export default function OrderPage() {
                       setTouched((p) => ({ ...p, table: true }));
                       setFormErrors(validateForm());
                     }}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm w-full bg-white"
+                    className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs w-full bg-white"
                   >
                     <option value="">Select Table Number</option>
                     {tableNumbers.map((num) => (
@@ -867,14 +864,16 @@ export default function OrderPage() {
                     ))}
                   </select>
                   {touched.table && formErrors.table && (
-                    <p className="text-red-500 text-xs">{formErrors.table}</p>
+                    <p className="text-red-500 text-[10px]">
+                      {formErrors.table}
+                    </p>
                   )}
                 </>
               )}
             </div>
 
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
+            <div className="mt-3">
+              <div className="flex items-center gap-1">
                 <input
                   type="checkbox"
                   id="consent-modal"
@@ -883,30 +882,32 @@ export default function OrderPage() {
                     setConsentChecked(e.target.checked);
                     setFormErrors(validateForm());
                   }}
-                  className="h-4 w-4 rounded text-[var(--primary)] focus:ring-[var(--primary)]"
+                  className="h-3 w-3 rounded text-[var(--primary)] focus:ring-[var(--primary)]"
                 />
                 <label
                   htmlFor="consent-modal"
-                  className="text-xs text-foreground/70"
+                  className="text-[10px] text-foreground/70"
                 >
                   I agree to store my details for order tracking.
                 </label>
               </div>
               {formErrors.consent && (
-                <p className="text-red-500 text-xs mt-1">
+                <p className="text-red-500 text-[10px] mt-0.5">
                   {formErrors.consent}
                 </p>
               )}
               {formErrors.cart && (
-                <p className="text-red-500 text-xs mt-1">{formErrors.cart}</p>
+                <p className="text-red-500 text-[10px] mt-0.5">
+                  {formErrors.cart}
+                </p>
               )}
             </div>
 
-            {/* 5. Place Order Button */}
+            {/* 5. Place Order Button - size reduced */}
             <button
               onClick={placeOrder}
               disabled={placing || !isFormValid}
-              className={`mt-6 w-full px-4 py-3 rounded-xl text-white text-lg font-bold transition-all shadow-lg flex items-center justify-center ${
+              className={`mt-4 w-full px-3 py-2 rounded-lg text-white text-sm font-bold transition-all shadow-lg flex items-center justify-center ${
                 isFormValid
                   ? "bg-[var(--primary)] hover:bg-[var(--primary-600)]"
                   : "bg-gray-400 cursor-not-allowed"
@@ -916,7 +917,7 @@ export default function OrderPage() {
                 "Processing..."
               ) : (
                 <>
-                  <CheckCircle className="w-5 h-5 mr-2" /> Confirm & Pay at
+                  <CheckCircle className="w-3 h-3 mr-1" /> Confirm & Pay at
                   Counter
                 </>
               )}

@@ -803,7 +803,7 @@ export default function Customise() {
 
   return (
     <main className="px-6 py-8 max-w-7xl mx-auto">
-      <h1 className="text-4xl font-bold text-center text-[var(--primary)]">
+      <h1 className="text-3xl text-center text-[var(--primary)]">
         Customise Your Dream Cake
       </h1>
       <p className="text-center mt-3 text-foreground/60">
@@ -815,14 +815,14 @@ export default function Customise() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
             {/* --- PRIMARY DESIGN SECTION --- */}
             <div className="lg:col-span-3">
-              <h2 className="text-2xl font-bold text-gray-800 border-b pb-3 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-6">
                 1. Core Cake Design
               </h2>
             </div>
 
             {/* Weight */}
             <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Weight (kg)
               </label>
               <div className="flex flex-wrap gap-3">
@@ -871,7 +871,7 @@ export default function Customise() {
 
             {/* Egg/Eggless */}
             <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Egg Status
               </label>
               <div className="flex flex-wrap gap-3">
@@ -902,7 +902,7 @@ export default function Customise() {
 
             {/* Flavour (Grid with Price) */}
             <div className="lg:col-span-3">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Flavour (Base Price/kg)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mt-3">
@@ -921,7 +921,7 @@ export default function Customise() {
                       {flavorItem.name}
                     </span>
                     <span
-                      className="block text-xs font-bold pt-1 text-gray-500 transition-colors duration-200"
+                      className="block text-[11px] font-bold pt-1 text-gray-500 transition-colors duration-200"
                       style={
                         flavour === flavorItem.name ? { color: "white" } : {}
                       }
@@ -935,7 +935,7 @@ export default function Customise() {
 
             {/* Shape (Buttons with Icons) */}
             <div className="lg:col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Cake Shape
               </label>
               <div className="flex flex-wrap gap-3">
@@ -962,7 +962,7 @@ export default function Customise() {
 
             {/* Icing */}
             <div className="col-span-1">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Icing Type
               </label>
               <div className="flex flex-wrap gap-3">
@@ -992,7 +992,9 @@ export default function Customise() {
 
             {/* Cake Type (Style) */}
             <div>
-              <label className="block text-sm font-medium">Cake Style</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Cake Style
+              </label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {cakeTypeOptions.map((opt) => {
                   const isPastryOption = opt === "Pastry";
@@ -1038,7 +1040,7 @@ export default function Customise() {
 
             {/* --- ADD-ONS SECTION --- */}
             <div className="lg:col-span-3 mt-6 pt-6 border-t border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-800 border-b pb-3 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-6">
                 2. Optional Add-ons
               </h2>
             </div>
@@ -1144,14 +1146,14 @@ export default function Customise() {
 
             {/* --- MEDIA & CONTACT SECTION --- */}
             <div className="lg:col-span-3 mt-8 pt-6 border-t border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-800 border-b pb-3 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 border-b pb-3 mb-6">
                 3. Details & Checkout
               </h2>
             </div>
 
             {/* DELIVERY DATE/TIME INPUT */}
             <div className="lg:col-span-3">
-              <label className="block text-base font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-gray-500" />
                 Required Delivery Date & Time (Minimum 2 Days)
               </label>
@@ -1166,7 +1168,7 @@ export default function Customise() {
 
             {/* Text on Cake */}
             <div className="md:col-span-2">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Text on Cake
               </label>
               <input
@@ -1185,7 +1187,7 @@ export default function Customise() {
             {/* Contact Details (Combined to fit 1 column on MD screen) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-base font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Your Name
                 </label>
                 <input
@@ -1196,7 +1198,7 @@ export default function Customise() {
                 />
               </div>
               <div>
-                <label className="block text-base font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Phone Number
                 </label>
                 <input
@@ -1214,7 +1216,7 @@ export default function Customise() {
             <div className="lg:col-span-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
-                  <label className="block text-base font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Design Reference Image (Optional)
                   </label>
                   <label className="mt-2 block w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-sm cursor-pointer hover:bg-gray-100 transition-colors">
@@ -1257,7 +1259,7 @@ export default function Customise() {
 
             {/* --- NEW: Chef Notes --- */}
             <div className="lg:col-span-3 mt-4">
-              <label className="block text-base font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Chef's Notes (Optional)
               </label>
               <textarea
@@ -1323,7 +1325,7 @@ export default function Customise() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-8 max-w-lg w-full text-left shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-[var(--primary)]">
+              <h2 className="text-xl font-bold text-[var(--primary)]">
                 Final Price Breakdown
               </h2>
               <button
@@ -1334,21 +1336,21 @@ export default function Customise() {
               </button>
             </div>
 
-            <div className="space-y-3 text-base max-h-80 overflow-y-auto pr-2">
+            <div className="space-y-3 text-sm max-h-80 overflow-y-auto pr-2">
               {pricingBreakdown.breakdown.map((item, index) => (
                 <div
                   key={index}
                   className="flex justify-between items-center border-b border-dashed border-gray-100 pb-2"
                 >
                   <span className="text-foreground/80">{item.label}</span>
-                  <span className="font-semibold text-lg">
+                  <span className="font-semibold text-base">
                     ₹{item.price.toFixed(2)}
                   </span>
                 </div>
               ))}
             </div>
             <hr className="my-4" />
-            <div className="flex justify-between items-center font-bold text-xl mb-4">
+            <div className="flex justify-between items-center font-bold text-lg mb-4">
               <span>ESTIMATED TOTAL</span>
               <span className="text-[var(--primary)]">
                 ₹{pricingBreakdown.total.toFixed(2)}
@@ -1381,8 +1383,8 @@ export default function Customise() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-8 max-w-sm w-full text-center shadow-2xl">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-3">Order Config Saved!</h2>
-            <p className="text-foreground/70 mb-6">
+            <h2 className="text-xl font-bold mb-3">Order Config Saved!</h2>
+            <p className="text-sm text-foreground/70 mb-6">
               Your cake details have been saved. A PDF of your customisation and
               QR code has been downloaded automatically.
             </p>
