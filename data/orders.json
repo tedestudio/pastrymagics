@@ -1,0 +1,54 @@
+{
+  "orders": [
+    {
+      "id": "ord_mfkuvo3fg380lx",
+      "orderNumber": "PM-250915-5VLS",
+      "name": "DUUU",
+      "phone": "1234567890",
+      "tableNumber": "12",
+      "items": [
+        {
+          "id": "croissant",
+          "name": "Butter Croissant",
+          "price": 60,
+          "qty": 2
+        }
+      ],
+      "status": "placed",
+      "total": 120,
+      "createdAt": "2025-09-15T08:22:14.715Z",
+      "payment": "pay-at-counter"
+    },
+    {
+      "id": "ord_mfkuio54tj9wbu",
+      "orderNumber": "PM-250915-V77Y",
+      "name": "Dusi",
+      "phone": "7569672800",
+      "tableNumber": "12",
+      "items": [
+        {
+          "id": "croissant",
+          "name": "Butter Croissant",
+          "price": 60,
+          "qty": 2
+        },
+        {
+          "id": "eclair",
+          "name": "Chocolate Éclair",
+          "price": 120,
+          "qty": 4
+        },
+        {
+          "id": "macaron",
+          "name": "Macaron (Box of 6)",
+          "price": 300,
+          "qty": 4
+        }
+      ],
+      "status": "placed",
+      "total": 1800,
+      "createdAt": "2025-09-15T08:12:08.248Z",
+      "payment": "pay-at-counter"
+    }
+  ]
+}
