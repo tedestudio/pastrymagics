@@ -4,60 +4,44 @@ export default function Home() {
   return (
     <main className="font-sans text-foreground">
       {/* Hero */}
-      <section className="relative h-[90vh] min-h-[560px] flex items-center justify-center overflow-hidden">
-        <svg width="0" height="0" aria-hidden>
-          <defs>
-            <clipPath id="curvedClip" clipPathUnits="objectBoundingBox">
-              <path d="M0,0 H1 V0.85 C0.7,0.95 0.3,0.95 0,0.85 Z" />
-            </clipPath>
-          </defs>
-        </svg>
+      <section className="relative h-[90vh] min-h-[560px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-red-50 via-white to-red-100">
         <div className="absolute inset-0 -z-10">
           <div className="relative w-full h-full overflow-hidden">
-            <div
-              className="absolute inset-0"
-              style={{
-                clipPath: "url(#curvedClip)",
-                backgroundColor: "var(--accent)",
-              }}
-            >
+            <div className="absolute inset-0 bg-red-600/5">
               <video
                 src="/cake.mp4"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover opacity-30"
                 autoPlay
                 loop
                 muted
                 playsInline
               />
             </div>
-            <div
-              className="absolute inset-0 bg-black/40"
-              style={{ clipPath: "url(#curvedClip)" }}
-            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/20 to-white/60" />
           </div>
         </div>
         <div className="relative z-10 text-center px-6">
-          <h1 className="text-background text-5xl md:text-7xl leading-tight">
+          <h1 className="text-[var(--primary)] text-5xl md:text-7xl leading-tight font-extrabold drop-shadow-sm">
             Baked with Love, Sprinkled with Magic
           </h1>
-          <p className="mt-4 text-white/90 max-w-2xl mx-auto text-base md:text-lg">
+          <p className="mt-6 text-foreground/80 max-w-2xl mx-auto text-lg md:text-xl font-medium">
             Custom cakes crafted to your taste. Instant dine-in orders straight
             from your table.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/order"
-              className="px-6 py-3 rounded-full bg-[var(--primary)] text-white text-sm font-medium hover:bg-[var(--primary-600)] transition-colors"
+              className="px-8 py-4 rounded-full bg-[var(--primary)] text-white text-base font-bold hover:bg-[var(--primary-600)] transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               aria-label="Order at the table"
             >
-              Order at the Table
+              🍽️ Order at the Table
             </Link>
             <Link
               href="/customise"
-              className="px-6 py-3 rounded-full bg-white text-[var(--foreground)] text-sm font-medium border border-white/60 hover:bg-white/90 transition-colors"
+              className="px-8 py-4 rounded-full bg-white text-[var(--primary)] text-base font-bold border-2 border-[var(--primary)] hover:bg-red-50 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               aria-label="Customize a cake"
             >
-              Customise a Cake
+              🎂 Customise a Cake
             </Link>
           </div>
         </div>
@@ -124,30 +108,30 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-16 px-6 bg-[var(--muted)]/60">
+      <section className="py-20 px-6 bg-gradient-to-b from-red-50 to-white">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl text-center font-semibold">
+          <h2 className="text-4xl md:text-5xl text-center font-bold text-[var(--primary)]">
             How It Works
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-            <div className="rounded-2xl bg-white p-6 border border-[var(--muted)]">
-              <div className="text-2xl">①</div>
-              <h3 className="mt-2 font-semibold">Pick your experience</h3>
-              <p className="mt-1 text-foreground/70">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+            <div className="rounded-2xl bg-white p-8 border-2 border-red-200 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="text-4xl font-bold text-[var(--primary)] mb-3">①</div>
+              <h3 className="text-xl font-bold text-foreground">Pick your experience</h3>
+              <p className="mt-2 text-foreground/70">
                 Dine‑in instant order or custom cake builder.
               </p>
             </div>
-            <div className="rounded-2xl bg-white p-6 border border-[var(--muted)]">
-              <div className="text-2xl">②</div>
-              <h3 className="mt-2 font-semibold">Personalise and confirm</h3>
-              <p className="mt-1 text-foreground/70">
+            <div className="rounded-2xl bg-white p-8 border-2 border-red-200 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="text-4xl font-bold text-[var(--primary)] mb-3">②</div>
+              <h3 className="text-xl font-bold text-foreground">Personalise and confirm</h3>
+              <p className="mt-2 text-foreground/70">
                 Select flavours, sizes, and notes—see transparent pricing.
               </p>
             </div>
-            <div className="rounded-2xl bg-white p-6 border border-[var(--muted)]">
-              <div className="text-2xl">③</div>
-              <h3 className="mt-2 font-semibold">We bake the magic</h3>
-              <p className="mt-1 text-foreground/70">
+            <div className="rounded-2xl bg-white p-8 border-2 border-red-200 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="text-4xl font-bold text-[var(--primary)] mb-3">③</div>
+              <h3 className="text-xl font-bold text-foreground">We bake the magic</h3>
+              <p className="mt-2 text-foreground/70">
                 Our chefs craft your order fresh and notify when ready.
               </p>
             </div>
@@ -218,10 +202,10 @@ export default function Home() {
               <div className="text-left">
                 <p className="font-semibold">Call Us</p>
                 <Link
-                  href="tel:+1234567890"
+                  href="tel:+919989384800"
                   className="text-foreground/70 hover:underline"
                 >
-                  +91 12345 67890
+                  +91 9989384800
                 </Link>
               </div>
             </div>

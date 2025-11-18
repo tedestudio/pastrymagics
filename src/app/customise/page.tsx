@@ -86,44 +86,83 @@ export default function Customise() {
   }, [weightKg]);
 
   const MIN_STEP_CAKE_WEIGHT = 3.0;
+  const FONDANT_MIN_KG = 2.0;
+  const SEMIFONDANT_MIN_KG = 1.5;
+  // Fallback flavour prices (INR per kg) from product spec in case DB missing
+  const FLAVOUR_FALLBACK: Record<string, number> = {
+    VANILLA: 900,
+    PINEAPPLE: 900,
+    STRAWBERRY: 900,
+    BUTTERSCOTCH: 1000,
+    "CHCOC CHIP": 1000,
+    "MILKY BUTTERSCOTCH": 1000,
+    BLACKBERRY: 1000,
+    BLUEBERRY: 1000,
+    "CHOCO VANILLA": 1000,
+    "CHOCO CRUNCH": 1100,
+    "CHOCO SYMPHONY": 1100,
+    "RED VELVET": 1200,
+    "FRUIT & NUT": 1200,
+    "HONEY ALMOND": 1200,
+    "CHOCO MUD": 1200,
+    HAZELLNUT: 1300,
+    "CHOCO KITKAT": 1300,
+    RAINBOW: 1500,
+  };
 
   // --- Dynamic Option Filtering ---
-  const weightOptions = useMemo(
-    () =>
-      options
-        .filter((o) => o.option_type === "weight")
-        .map((o) => o.option_name),
-    [options]
-  );
-  const allIcingOptions = useMemo(
-    () =>
-      options
-        .filter((o) => o.option_type === "icing")
-        .map((o) => o.option_name),
-    [options]
-  );
-  const cakeTypeOptions = useMemo(
-    () =>
-      options
-        .filter((o) => o.option_type === "cake_type")
-        .map((o) => o.option_name),
-    [options]
-  );
-  const shapeOptions = useMemo(
-    () =>
-      options
-        .filter((o) => o.option_type === "shape")
-        .map((o) => o.option_name),
-    [options]
-  );
-  const toyOptions = useMemo(
-    () =>
-      options.filter((o) => o.option_type === "toy").map((o) => o.option_name),
-    [options]
-  );
+  const weightOptions = useMemo(() => {
+    const fromDb = options
+      .filter((o) => o.option_type === "weight")
+      .map((o) => String(o.option_name));
+
+    // Fallback weights if DB does not provide any weight options
+    if (!fromDb || fromDb.length === 0) {
+      return ["1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0"];
+    }
+
+    return fromDb;
+  }, [options]);
+  const allIcingOptions = useMemo(() => {
+    const fromDb = options
+      .filter((o) => o.option_type === "icing")
+      .map((o) => String(o.option_name));
+    if (!fromDb || fromDb.length === 0) {
+      return ["Cream", "Semi-Fondant", "Fondant"];
+    }
+    return fromDb;
+  }, [options]);
+  const cakeTypeOptions = useMemo(() => {
+    const fromDb = options
+      .filter((o) => o.option_type === "cake_type")
+      .map((o) => String(o.option_name));
+    if (!fromDb || fromDb.length === 0) {
+      return ["Pastry", "Occasional / Celebration", "Designer / Custom Cakes"];
+    }
+    return fromDb;
+  }, [options]);
+  const shapeOptions = useMemo(() => {
+    const fromDb = options
+      .filter((o) => o.option_type === "shape")
+      .map((o) => String(o.option_name));
+    if (!fromDb || fromDb.length === 0) {
+      return ["Round", "Heart", "Square", "Rectangle", "Custom Shape"];
+    }
+    return fromDb;
+  }, [options]);
+  const toyOptions = useMemo(() => {
+    const fromDb = options
+      .filter((o) => o.option_type === "toy")
+      .map((o) => String(o.option_name));
+    if (!fromDb || fromDb.length === 0) {
+      return ["Non-Edible Toys"];
+    }
+    return fromDb;
+  }, [options]);
   const flowerOptionPrice = useMemo(() => {
     const flowerOption = options.find((o) => o.option_type === "flower");
-    return flowerOption?.base_price || 0;
+    // default per flower price 50
+    return flowerOption?.base_price || 50;
   }, [options]);
 
   const shapeIconMap: Record<string, React.ElementType> = useMemo(
@@ -140,27 +179,36 @@ export default function Customise() {
 
   const availableIcingOptions = useMemo(() => {
     const restrictedIcings = ["Fondant", "Semi-Fondant"];
-
-    if (cakeType === "Regular Cake") {
+    // If Pastry is selected, disallow structural icings
+    if (cakeType === "Pastry") {
       return allIcingOptions.filter((opt) => !restrictedIcings.includes(opt));
-    } else if (cakeType && cakeType !== "Pastry") {
+    }
+    // For other cake styles, remove Butter Cream (not suitable for designer styles)
+    if (cakeType && cakeType !== "Pastry") {
       return allIcingOptions.filter((opt) => opt !== "Butter Cream");
     }
     return allIcingOptions;
   }, [allIcingOptions, cakeType]);
 
+  // If icing choice requires a minimum weight, clear it when weight becomes invalid
+  useEffect(() => {
+    if (icing === "Fondant" && numericWeight < FONDANT_MIN_KG) {
+      setIcing(null);
+    }
+    if (icing === "Semi-Fondant" && numericWeight < SEMIFONDANT_MIN_KG) {
+      setIcing(null);
+    }
+  }, [icing, numericWeight]);
+
   const isFondant = useMemo(() => icing === "Fondant", [icing]);
-  const isFourKgOrMore = useMemo(() => numericWeight >= 4, [numericWeight]);
-  const isBasePromotionActive = useMemo(
-    () => isFondant && isFourKgOrMore,
-    [isFondant, isFourKgOrMore]
+  const isFondantEligible = useMemo(
+    () => isFondant && numericWeight >= FONDANT_MIN_KG,
+    [isFondant, numericWeight]
   );
-  // --- Icing Reset Effect (unchanged) ---
+  // --- Icing Reset Effect ---
   useEffect(() => {
     if (icing && !availableIcingOptions.includes(icing)) {
-      const newDefault = availableIcingOptions.includes("Whipped Cream")
-        ? "Whipped Cream"
-        : availableIcingOptions[0] || null;
+      const newDefault = availableIcingOptions[0] || null;
 
       setIcing(newDefault);
       if (newDefault) {
@@ -182,19 +230,13 @@ export default function Customise() {
       deliveryDate: null,
     };
 
-    if (icing === "Fondant" && numericWeight < 1) {
-      errors.fondantWeight = "Fondant icing requires a minimum weight of 1kg.";
+    if (icing === "Fondant" && numericWeight < FONDANT_MIN_KG) {
+      errors.fondantWeight = `Fondant icing requires a minimum weight of ${FONDANT_MIN_KG}kg.`;
     }
-    if (icing === "Semi-Fondant" && numericWeight < 1) {
-      errors.semiFondantWeight =
-        "Semi-Fondant icing requires a minimum weight of 1kg.";
+    if (icing === "Semi-Fondant" && numericWeight < SEMIFONDANT_MIN_KG) {
+      errors.semiFondantWeight = `Semi-Fondant icing requires a minimum weight of ${SEMIFONDANT_MIN_KG}kg.`;
     }
-    if (
-      cakeType === "Step Cake / Tier Cake" &&
-      numericWeight < MIN_STEP_CAKE_WEIGHT
-    ) {
-      errors.tierCakeWeight = `Tier cake requires a minimum total weight of ${MIN_STEP_CAKE_WEIGHT}kg.`;
-    }
+    // Removed tier cake specific validation (Step Cake / Tier Cake option deprecated)
 
     if (
       !weightKg ||
@@ -271,9 +313,12 @@ export default function Customise() {
             )?.option_name ||
             data.find((o) => o.option_type === "weight")?.option_name;
 
-          const initialIcing =
-            data.find((o) => o.option_name === "Whipped Cream")?.option_name ||
-            data.find((o) => o.option_type === "icing")?.option_name;
+          const initialIcing = data.find(
+            (o) =>
+              o.option_type === "icing" &&
+              o.option_name !== "Whipped Cream" &&
+              o.option_name !== "Butter Cream"
+          )?.option_name;
 
           const initialFlavour = data.find(
             (o) => o.option_type === "flavor"
@@ -316,17 +361,24 @@ export default function Customise() {
 
     const getRulePrice = (ruleName: string) => {
       const found = extraPricing.find((r) => r.rule_name === ruleName);
-      return found ? Number(found.price) : 0;
+      // Default fallback for Eggless (per kg) is 100 if rule missing
+      if (found) return Number(found.price);
+      if (ruleName === "Eggless") return 100;
+      return 0;
     };
 
     let total = 0;
-    const isFondant = icing === "Fondant";
-    const isFourKgOrMore = numericWeight >= 4;
-    const isBasePromotionActive = isFondant && isFourKgOrMore;
 
-    // --- Core Price Calculation (Flavor * Weight Multiplier) ---
-    const flavorBasePrice = getOptionPrice("flavor", flavour);
-    const baseCakePrice = flavorBasePrice * numericWeight;
+    // --- Core Price Calculation (Flavor + Icing extra per kg) ---
+    let flavorBasePrice = getOptionPrice("flavor", flavour);
+    if ((!flavorBasePrice || flavorBasePrice === 0) && flavour) {
+      const key = flavour.toUpperCase();
+      flavorBasePrice = FLAVOUR_FALLBACK[key] || flavorBasePrice || 0;
+    }
+    // Icing extra per kg: Cream/Whipped = 0, Semi-Fondant = +500, Fondant = +700
+    const icingExtraPerKg =
+      icing === "Fondant" ? 700 : icing === "Semi-Fondant" ? 500 : 0;
+    const baseCakePrice = (flavorBasePrice + icingExtraPerKg) * numericWeight;
     total += baseCakePrice;
 
     // --- Eggless Price (Multiplier) ---
@@ -335,21 +387,26 @@ export default function Customise() {
       total += egglessPricePerKg * numericWeight;
     }
 
-    total += getOptionPrice("shape", shape);
-
-    // --- Tiered Icing Pricing (unchanged) ---
-    if (icing === "Fondant") {
-      total += getOptionPrice("icing", icing) * numericWeight;
+    // Shape pricing: if shape is "Custom" or contains "Custom" treat shape price as per-kg
+    if (shape) {
+      const shapePrice = getOptionPrice("shape", shape);
+      if (/custom/i.test(shape)) {
+        total += shapePrice * numericWeight || 200 * numericWeight; // fallback 200/kg
+      } else {
+        total += shapePrice;
+      }
     }
 
-    if (icing === "Semi-Fondant") {
+    // --- Tiered Icing Pricing (unchanged) ---
+    // Note: Fondant/Semi-Fondant extra handled as icingExtraPerKg above. Keep any configured extra as additive.
+    if (icing === "Fondant" || icing === "Semi-Fondant") {
       total += getOptionPrice("icing", icing) * numericWeight;
     }
 
     // --- Add-on Pricing (Photo, Flowers, Toys) ---
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
-      const basePhotoPrice = getOptionPrice("photos", "Photos");
+      const basePhotoPrice = getOptionPrice("photos", "Photos") || 250;
       total += basePhotoPrice * multiplier;
     }
 
@@ -361,11 +418,16 @@ export default function Customise() {
           const baseToyPrice =
             options.find(
               (o) => o.option_type === "toy" && o.option_name === toyName
-            )?.base_price || 0;
+            )?.base_price || 200;
 
           let price = baseToyPrice * count;
 
-          if (toyName === "Edible Toys" && isBasePromotionActive) {
+          // Fondant promo: first 5 edible toys are free if icing is Fondant and eligible (>= min kg)
+          if (
+            toyName === "Edible Toys" &&
+            icing === "Fondant" &&
+            numericWeight >= FONDANT_MIN_KG
+          ) {
             const payableCount = Math.max(0, count - 5);
             price = baseToyPrice * payableCount;
           }
@@ -408,9 +470,15 @@ export default function Customise() {
     const breakdown: { label: string; price: number }[] = [];
     let currentTotal = 0;
 
-    // --- Core Price Calculation ---
-    const flavorBasePrice = getOptionPrice("flavor", flavour);
-    const baseCakePrice = flavorBasePrice * numericWeight;
+    // --- Core Price Calculation (Flavor + Icing extra per kg) ---
+    let flavorBasePrice = getOptionPrice("flavor", flavour);
+    if ((!flavorBasePrice || flavorBasePrice === 0) && flavour) {
+      const key = flavour.toUpperCase();
+      flavorBasePrice = FLAVOUR_FALLBACK[key] || flavorBasePrice || 0;
+    }
+    const icingExtraPerKg =
+      icing === "Fondant" ? 700 : icing === "Semi-Fondant" ? 500 : 0;
+    const baseCakePrice = (flavorBasePrice + icingExtraPerKg) * numericWeight;
 
     // 1. Flavor + Weight Multiplier
     if (flavour && numericWeight > 0) {
@@ -440,21 +508,14 @@ export default function Customise() {
         currentTotal += price;
       }
     }
-    const isFourKgOrMore = numericWeight >= 1;
-    const isBasePromotionActive = isFondant && isFourKgOrMore;
+    const isFondantSelectedAndEligible =
+      icing === "Fondant" && numericWeight >= FONDANT_MIN_KG;
 
-    if (icing === "Fondant") {
-      let label = `Icing (${icing})`;
-      let price = getOptionPrice("icing", icing) * numericWeight;
+    if (icing === "Fondant" || icing === "Semi-Fondant") {
+      const label = `Icing (${icing})`;
+      const price = getOptionPrice("icing", icing) * numericWeight;
       if (price > 0) {
-        breakdown.push({ label: label, price: price });
-        currentTotal += price;
-      }
-    } else if (icing === "Semi-Fondant") {
-      let label = `Icing (${icing})`;
-      let price = getOptionPrice("icing", icing) * numericWeight;
-      if (price > 0) {
-        breakdown.push({ label: label, price: price });
+        breakdown.push({ label, price });
         currentTotal += price;
       }
     } else if (icing) {
@@ -464,7 +525,7 @@ export default function Customise() {
     // 6. Photo Count (unchanged)
     if (photoCount > 0) {
       const multiplier = Math.ceil(photoCount / 2);
-      const basePhotoPrice = getOptionPrice("photos", "Photos");
+      const basePhotoPrice = getOptionPrice("photos", "Photos") || 250;
       const price = basePhotoPrice * multiplier;
       breakdown.push({ label: `Photo Cake (${photoCount} photos)`, price });
       currentTotal += price;
@@ -484,12 +545,12 @@ export default function Customise() {
           const baseToyPrice =
             options.find(
               (o) => o.option_type === "toy" && o.option_name === toyName
-            )?.base_price || 0;
+            )?.base_price || 200;
 
           let price = baseToyPrice * count;
           let label = `${toyName} (${count} units)`;
 
-          if (toyName === "Edible Toys" && isBasePromotionActive) {
+          if (toyName === "Edible Toys" && isFondantSelectedAndEligible) {
             const payableCount = Math.max(0, count - 5);
             price = baseToyPrice * payableCount;
             label = `${toyName} (${count} units, 5 FREE)`;
@@ -522,13 +583,20 @@ export default function Customise() {
   // --- END PRICE BREAKDOWN CALCULATION ---
 
   const flavourPriceMap = useMemo(() => {
-    return options
+    const fromDb = options
       .filter((o) => o.option_type === "flavor")
-      .map((o) => ({
-        name: o.option_name,
-        price: o.base_price,
-      }))
-      .sort((a, b) => a.price - b.price);
+      .map((o) => ({ name: o.option_name, price: Number(o.base_price) }));
+
+    if (!fromDb || fromDb.length === 0) {
+      return Object.entries(FLAVOUR_FALLBACK)
+        .map(([name, price]) => ({
+          name,
+          price,
+        }))
+        .sort((a, b) => a.price - b.price);
+    }
+
+    return fromDb.sort((a, b) => a.price - b.price);
   }, [options]);
 
   // --- UTILITY FUNCTIONS (mostly unchanged) ---
@@ -833,30 +901,15 @@ export default function Customise() {
                     <button
                       key={w}
                       onClick={() => {
-                        if (
-                          cakeType === "Step Cake / Tier Cake" &&
-                          parseFloat(w) < MIN_STEP_CAKE_WEIGHT
-                        ) {
-                          alert(
-                            `Tier Cake requires ${MIN_STEP_CAKE_WEIGHT}kg or more.`
-                          );
-                          return;
-                        }
                         setWeightKg(w);
                       }}
                       className={`relative px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                        cakeType === "Step Cake / Tier Cake" &&
-                        parseFloat(w) < MIN_STEP_CAKE_WEIGHT
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                          : weightKg === w
+                        weightKg === w
                           ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
                           : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
                       }`}
                       aria-pressed={weightKg === w}
-                      disabled={
-                        cakeType === "Step Cake / Tier Cake" &&
-                        parseFloat(w) < MIN_STEP_CAKE_WEIGHT
-                      }
+                      disabled={false}
                     >
                       {w === "0.5" && (
                         <span className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[10px] bg-yellow-500 text-white font-bold px-1.5 py-0.5 rounded-full shadow-md">
@@ -944,7 +997,13 @@ export default function Customise() {
                   return (
                     <button
                       key={opt}
-                      onClick={() => setShape(opt)}
+                      onClick={() => {
+                        // When Custom Shape is selected, ensure minimum 2kg weight
+                        if (opt === "Custom Shape" && numericWeight < 2) {
+                          setWeightKg("2.0");
+                        }
+                        setShape(opt);
+                      }}
                       className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 hover:shadow-sm ${
                         shape === opt
                           ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
@@ -966,28 +1025,46 @@ export default function Customise() {
                 Icing Type
               </label>
               <div className="flex flex-wrap gap-3">
-                {availableIcingOptions.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setIcing(opt)}
-                    className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
-                      icing === opt
-                        ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
-                        : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
-                    }`}
-                    aria-pressed={icing === opt}
-                  >
-                    {opt}
-                  </button>
-                ))}
+                {availableIcingOptions.map((opt) => {
+                  const disabledForWeight =
+                    (opt === "Fondant" && numericWeight < FONDANT_MIN_KG) ||
+                    (opt === "Semi-Fondant" &&
+                      numericWeight < SEMIFONDANT_MIN_KG);
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        if (disabledForWeight) return;
+                        setIcing(opt);
+                      }}
+                      className={`px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 ${
+                        disabledForWeight
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                          : icing === opt
+                          ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
+                          : "bg-white text-foreground border-gray-300 hover:border-[var(--primary)]/50 hover:shadow-sm"
+                      }`}
+                      aria-pressed={icing === opt}
+                      disabled={disabledForWeight}
+                    >
+                      {opt}
+                      {opt === "Fondant" && disabledForWeight && (
+                        <span className="block text-xs text-red-500">
+                          (requires &gt;= 2kg)
+                        </span>
+                      )}
+                      {opt === "Semi-Fondant" && disabledForWeight && (
+                        <span className="block text-xs text-red-500">
+                          (requires &gt;= 1.5kg)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Conditional Promo Note */}
-              {isFondant && (
-                <p className="mt-2 text-sm font-medium text-[var(--primary-600)]">
-                  PROMO: 4kg+ Fondant cakes get 5 edible toys FREE!
-                </p>
-              )}
+              {/* Promo removed: edible toys option deprecated */}
             </div>
 
             {/* Cake Type (Style) */}
@@ -1012,13 +1089,7 @@ export default function Customise() {
                           return;
                         }
 
-                        // Logic to snap weight to 3kg if step cake is selected and weight is too low
-                        if (
-                          opt === "Step Cake / Tier Cake" &&
-                          numericWeight < MIN_STEP_CAKE_WEIGHT
-                        ) {
-                          setWeightKg(MIN_STEP_CAKE_WEIGHT.toString());
-                        }
+                        // Step Cake / Tier Cake option removed; no snapping logic required
                         setCakeType(opt);
                       }}
                       className={`px-3 py-2 rounded-md text-sm border transition-colors duration-200 ${
@@ -1134,12 +1205,6 @@ export default function Customise() {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                  {/* Promo Note - Simplified display */}
-                  {toyName === "Edible Toys" && isBasePromotionActive && (
-                    <p className="mt-1 text-xs text-green-600 font-medium">
-                      (5 FREE for 4kg+ Fondant)
-                    </p>
-                  )}
                 </div>
               ))}
             </div>

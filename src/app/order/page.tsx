@@ -642,6 +642,7 @@ export default function OrderPage() {
                             <div>
                               <p className="font-semibold text-xs flex items-center gap-1">
                                 {it.name}
+                                <span className="opacity-50">*</span>
                                 <IconComponent
                                   className={`w-3 h-3 ${dietColor}`}
                                 />
@@ -688,6 +689,7 @@ export default function OrderPage() {
                               <div>
                                 <p className="font-semibold text-xs flex items-center gap-1">
                                   {it.name}
+                                  <span className="opacity-50">*</span>
                                   <IconComponent
                                     className={`w-3 h-3 ${dietColor}`}
                                   />
@@ -981,7 +983,8 @@ export default function OrderPage() {
         </div>
       )}
       <p className="text-xs">
-        images are for reference only. actual item may vary.
+        * Images are for illustration purpose only. Original quantity and food
+        may vary.
       </p>
     </main>
   );

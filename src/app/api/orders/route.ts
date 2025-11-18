@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 type OrderItem = {
   price: number;
   qty: number;
+  item_parcel?: number;
 };
 
 export async function POST(req: Request) {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, phone, tableNumber, items } = await req.json();
+    const { name, phone, tableNumber, isParcelOrder, items } = await req.json();
 
     if (!items || !Array.isArray(items)) {
       return NextResponse.json(
@@ -25,9 +26,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Calculate total price
+    // Calculate total price including parcel fees for takeaway orders
     const total = items.reduce(
-      (sum: number, item: OrderItem) => sum + item.price * item.qty,
+      (sum: number, item: OrderItem) => {
+        const itemTotal = item.price * item.qty;
+        const parcelFee = isParcelOrder && item.item_parcel ? item.item_parcel * item.qty : 0;
+        return sum + itemTotal + parcelFee;
+      },
       0
     );
 
