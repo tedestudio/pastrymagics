@@ -981,7 +981,7 @@ export default function OrderPage() {
         </div>
       )}
       <p className="text-xs">
-        images are for reference only. actual item may vary.
+        Images are for illustration purpose only. Original quantity and food may vary.
       </p>
     </main>
   );

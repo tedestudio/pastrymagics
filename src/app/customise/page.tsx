@@ -140,13 +140,17 @@ export default function Customise() {
 
   const availableIcingOptions = useMemo(() => {
     const restrictedIcings = ["Fondant", "Semi-Fondant"];
+    const removedIcings = ["Whipped Cream", "Butter Cream"];
+
+    // First, filter out permanently removed icings
+    let filteredOptions = allIcingOptions.filter((opt) => !removedIcings.includes(opt));
 
     if (cakeType === "Regular Cake") {
-      return allIcingOptions.filter((opt) => !restrictedIcings.includes(opt));
+      return filteredOptions.filter((opt) => !restrictedIcings.includes(opt));
     } else if (cakeType && cakeType !== "Pastry") {
-      return allIcingOptions.filter((opt) => opt !== "Butter Cream");
+      return filteredOptions;
     }
-    return allIcingOptions;
+    return filteredOptions;
   }, [allIcingOptions, cakeType]);
 
   const isFondant = useMemo(() => icing === "Fondant", [icing]);
@@ -155,12 +159,10 @@ export default function Customise() {
     () => isFondant && isFourKgOrMore,
     [isFondant, isFourKgOrMore]
   );
-  // --- Icing Reset Effect (unchanged) ---
+  // --- Icing Reset Effect ---
   useEffect(() => {
     if (icing && !availableIcingOptions.includes(icing)) {
-      const newDefault = availableIcingOptions.includes("Whipped Cream")
-        ? "Whipped Cream"
-        : availableIcingOptions[0] || null;
+      const newDefault = availableIcingOptions[0] || null;
 
       setIcing(newDefault);
       if (newDefault) {
@@ -272,8 +274,7 @@ export default function Customise() {
             data.find((o) => o.option_type === "weight")?.option_name;
 
           const initialIcing =
-            data.find((o) => o.option_name === "Whipped Cream")?.option_name ||
-            data.find((o) => o.option_type === "icing")?.option_name;
+            data.find((o) => o.option_type === "icing" && o.option_name !== "Whipped Cream" && o.option_name !== "Butter Cream")?.option_name;
 
           const initialFlavour = data.find(
             (o) => o.option_type === "flavor"
@@ -944,7 +945,13 @@ export default function Customise() {
                   return (
                     <button
                       key={opt}
-                      onClick={() => setShape(opt)}
+                      onClick={() => {
+                        // When Custom Shape is selected, ensure minimum 2kg weight
+                        if (opt === "Custom Shape" && numericWeight < 2) {
+                          setWeightKg("2.0");
+                        }
+                        setShape(opt);
+                      }}
                       className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm border-2 transition-all duration-200 hover:shadow-sm ${
                         shape === opt
                           ? "bg-[var(--primary)] text-white border-[var(--primary)] shadow-md"
