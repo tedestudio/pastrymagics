@@ -970,7 +970,7 @@ export default function Customise() {
                     }`}
                     aria-pressed={flavour === flavorItem.name}
                   >
-                    <span className="block font-medium leading-snug">
+                    <span className="block font-medium leading-snug text-sm md:text-base">
                       {flavorItem.name}
                     </span>
                     <span
