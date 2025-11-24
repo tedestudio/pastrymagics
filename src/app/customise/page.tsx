@@ -879,7 +879,7 @@ export default function Customise() {
       </p>
 
       <div className="mt-10">
-        <section className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-lg">
+        <section className="md:rounded-xl md:border md:border-gray-200 bg-white md:p-8 md:shadow-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
             {/* --- PRIMARY DESIGN SECTION --- */}
             <div className="lg:col-span-3">
