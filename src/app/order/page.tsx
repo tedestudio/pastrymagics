@@ -31,26 +31,14 @@ import {
 } from "lucide-react";
 
 // // --- DUMMY AD DATA (Kept for completeness) ---
-// const AD_BANNERS = [
-//   {
-//     id: "combo_special",
-//     image: "/ads/combo_promo.jpg",
-//     text: "🚨 50% OFF Combo Deals! Tap to see Menu!",
-//     targetCategory: "Rice Combos" as const,
-//   },
-//   {
-//     id: "korean_wings",
-//     image: "/ads/korean_promo.jpg",
-//     text: "🌶️ Korean Wings: Buy 1 Get 1 Free!",
-//     targetCategory: "Ramen & Corn Dogs" as const,
-//   },
-//   {
-//     id: "bakery_sweet",
-//     image: "/ads/bakery_promo.jpg",
-//     text: "🍰 Special Pastries! Freshly Baked!",
-//     targetCategory: "Bakery Specials" as const,
-//   },
-// ];
+// --- OFFER TYPE ---
+type Offer = {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  target_category?: string; // Can be a MenuCategory or null
+};
 
 // --- ENUM TYPES (Kept for consistency) ---
 type MenuCategory =
@@ -163,6 +151,7 @@ export default function OrderPage() {
   const [isVegFilterActive, setIsVegFilterActive] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>("Dine-In");
   const [searchTerm, setSearchTerm] = useState("");
+  const [offers, setOffers] = useState<Offer[]>([]); // NEW: Offers state
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -174,35 +163,35 @@ export default function OrderPage() {
     consent: false,
   });
 
-  // // --- BANNER SCROLL EFFECT ---
-  // useEffect(() => {
-  //   if (!bannerRef.current) return;
+  // --- BANNER SCROLL EFFECT ---
+  useEffect(() => {
+    if (!bannerRef.current || offers.length === 0) return;
 
-  //   const bannerContainer = bannerRef.current;
+    const bannerContainer = bannerRef.current;
 
-  //   const scrollNext = () => {
-  //     const { scrollLeft, clientWidth } = bannerContainer;
-  //     const currentSlideIndex = Math.round(scrollLeft / clientWidth);
-  //     const totalSlides = AD_BANNERS.length;
+    const scrollNext = () => {
+      const { scrollLeft, clientWidth } = bannerContainer;
+      const currentSlideIndex = Math.round(scrollLeft / clientWidth);
+      const totalSlides = offers.length;
 
-  //     let nextScrollPosition;
+      let nextScrollPosition;
 
-  //     if (currentSlideIndex >= totalSlides - 1) {
-  //       nextScrollPosition = 0;
-  //     } else {
-  //       nextScrollPosition = scrollLeft + clientWidth;
-  //     }
+      if (currentSlideIndex >= totalSlides - 1) {
+        nextScrollPosition = 0;
+      } else {
+        nextScrollPosition = scrollLeft + clientWidth;
+      }
 
-  //     bannerContainer.scrollTo({
-  //       left: nextScrollPosition,
-  //       behavior: "smooth",
-  //     });
-  //   };
+      bannerContainer.scrollTo({
+        left: nextScrollPosition,
+        behavior: "smooth",
+      });
+    };
 
-  //   const intervalId = setInterval(scrollNext, 4000);
+    const intervalId = setInterval(scrollNext, 4000);
 
-  //   return () => clearInterval(intervalId);
-  // }, [AD_BANNERS.length]);
+    return () => clearInterval(intervalId);
+  }, [offers.length]);
 
   // --- FETCH AND INITIALIZE ---
   useEffect(() => {
@@ -251,20 +240,29 @@ export default function OrderPage() {
           }
         }
       } catch {}
+
+      // Fetch Offers
+      try {
+        const res = await fetch("/api/offers");
+        if (res.ok) {
+          const data = await res.json();
+          setOffers(data);
+        }
+      } catch {}
     })();
   }, []);
 
   // // --- BANNER INTERACTION HANDLER ---
-  // const handleAdClick = (targetCategory: MenuCategory) => {
-  //   // 1. Change the selected category
-  //   setSelectedCategory(targetCategory);
-  //   setSearchTerm(""); // Clear search when navigating via banner
-  //   // 2. Scroll the user down to the menu view (optional, but helpful)
-  //   const menuSection = document.getElementById("menu-section-container");
-  //   if (menuSection) {
-  //     // For a non-scrolling viewport, this is generally not needed.
-  //   }
-  // };
+  // --- BANNER INTERACTION HANDLER ---
+  const handleAdClick = (targetCategory?: string) => {
+    if (!targetCategory) return;
+    // 1. Change the selected category
+    // Verify if category exists in our list
+    if (categories.includes(targetCategory as any)) {
+        setSelectedCategory(targetCategory as MenuCategory);
+        setSearchTerm(""); // Clear search when navigating via banner
+    }
+  };
 
   const categories = useMemo<(MenuCategory | "All")[]>(() => {
     const cats = new Set(menuItems.map((item) => item.category));
@@ -473,30 +471,37 @@ export default function OrderPage() {
       <p className="mt-1 text-foreground/60 hidden sm:block text-xs flex-shrink-0">
         Browse, customize, and checkout using the cart button below.
       </p>
-      {/* <div
-        ref={bannerRef}
-        className="mt-3 mb-5 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-lg shadow-md bg-gray-100 flex-shrink-0"
-        style={{ scrollSnapType: "x mandatory" }}
-      >
-        {AD_BANNERS.map((ad) => (
-          <div
-            key={ad.id}
-            onClick={() => handleAdClick(ad.targetCategory)}
-            className="flex-shrink-0 w-full snap-center relative h-10 md:h-12 cursor-pointer"
-            style={{
-              backgroundImage: `url(${ad.image})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          >
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-1">
-              <p className="text-xs md:text-sm font-extrabold text-white text-center tracking-wide">
-                {ad.text}
-              </p>
+      {offers.length > 0 && (
+        <div
+          ref={bannerRef}
+          className="mt-3 mb-5 flex overflow-x-scroll snap-x snap-mandatory scrollbar-hide rounded-lg shadow-md bg-gray-100 flex-shrink-0"
+          style={{ scrollSnapType: "x mandatory" }}
+        >
+          {offers.map((ad) => (
+            <div
+              key={ad.id}
+              onClick={() => handleAdClick(ad.target_category)}
+              className="flex-shrink-0 w-full snap-center relative h-32 md:h-40 cursor-pointer"
+              style={{
+                backgroundImage: `url(${ad.image_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="absolute inset-0 bg-black bg-opacity-30 flex items-end justify-start p-4">
+                <div>
+                    <p className="text-lg md:text-xl font-extrabold text-white tracking-wide drop-shadow-md">
+                    {ad.title}
+                    </p>
+                    <p className="text-xs md:text-sm text-white/90 font-medium drop-shadow-md">
+                        {ad.description}
+                    </p>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div> */}
+          ))}
+        </div>
+      )}
 
       {/* 2. MIDDLE CONTENT GRID: Use flex-grow and overflow-y-hidden */}
       <div
