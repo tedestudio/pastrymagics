@@ -101,6 +101,25 @@ export async function POST(req: Request) {
       );
     }
 
+    // 4️⃣ Send Notification
+    try {
+      const { messaging } = await import("@/lib/firebase-admin");
+      await messaging.send({
+        topic: "store_orders",
+        notification: {
+          title: "New Order Received!",
+          body: `Order #${orderData.order_number} - ${name} (₹${total})`,
+        },
+        data: {
+          orderId: orderData.id,
+          orderNumber: orderData.order_number,
+        },
+      });
+    } catch (notifyError) {
+      console.error("Failed to send notification:", notifyError);
+      // Don't fail the request if notification fails
+    }
+
     return NextResponse.json(
       {
         id: orderData.id,

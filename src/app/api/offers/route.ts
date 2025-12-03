@@ -1,12 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
+
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
+  if (!supabase) {
+    console.error("Supabase client is not initialized.");
+    return NextResponse.json(
+      { error: "Supabase client not available" },
+      { status: 500 }
+    );
+  }
   const { data, error } = await supabase
     .from("offers")
     .select("*")
